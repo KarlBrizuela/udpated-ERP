@@ -1,0 +1,1443 @@
+/* ============================================
+   Comprehensive Responsive Stylesheet
+   For All Pages - Claretian System
+   ============================================ */
+
+/* Base responsive utilities */
+* {
+	box-sizing: border-box;
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+}
+
+/* ============================================
+   Logo Responsive Behavior
+   ============================================ */
+
+/* Show both logo and text logo on desktop/tablet */
+.brand-logo .brand-title {
+	display: block;
+}
+
+/* Hide text logo on mobile devices (below 991px) */
+@media only screen and (max-width: 991px) {
+	.brand-logo .brand-title {
+		display: none !important;
+		visibility: hidden !important;
+		opacity: 0 !important;
+		width: 0 !important;
+		height: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+	
+	/* Ensure main logo is centered when text logo is hidden */
+	.brand-logo {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+}
+
+/* ============================================
+   Button Size Matching - Make Add buttons same size as dropdowns
+   ============================================ */
+
+/* Match Add button height to dropdown/select boxes - same as default-select */
+.btn-primary.rounded.d-flex.align-items-center,
+a.btn-primary.rounded.d-flex.align-items-center[data-bs-toggle="modal"],
+.btn-primary.rounded:has(.las.la-plus),
+.btn-primary.rounded:has(.fa-plus),
+.btn-primary.rounded:has(i.las.la-plus) {
+	height: 38px !important;
+	min-height: 38px !important;
+	padding: 0.5rem 1rem !important;
+	line-height: 1.5 !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	box-sizing: border-box !important;
+	border: none !important;
+	border-radius: 0.375rem !important;
+	background: #ff0000 !important;
+	color: #ffffff !important;
+	font-weight: 500 !important;
+	transition: all 0.2s ease !important;
+	gap: 0.5rem !important;
+}
+
+/* Hover state for Add buttons */
+.btn-primary.rounded.d-flex.align-items-center:hover,
+a.btn-primary.rounded.d-flex.align-items-center[data-bs-toggle="modal"]:hover {
+	background: #cc0000 !important;
+	color: #ffffff !important;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(255, 0, 0, 0.2) !important;
+}
+
+/* Active state */
+.btn-primary.rounded.d-flex.align-items-center:active,
+a.btn-primary.rounded.d-flex.align-items-center[data-bs-toggle="modal"]:active {
+	background: #990000 !important;
+	transform: translateY(0);
+	box-shadow: 0 1px 2px rgba(255, 0, 0, 0.2) !important;
+}
+
+/* Ensure buttons next to select boxes match exactly */
+.default-select.style-1 ~ .btn-primary.rounded,
+.default-select.style-1 + .btn-primary.rounded,
+select.default-select.style-1 ~ .btn-primary.rounded,
+select.default-select.style-1 + .btn-primary.rounded,
+.d-flex.align-items-center .default-select.style-1 ~ .btn-primary.rounded {
+	height: 38px !important;
+	min-height: 38px !important;
+	padding: 0.5rem 1rem !important;
+}
+
+/* Match form-control select height */
+.form-control ~ .btn-primary.rounded,
+select.form-control ~ .btn-primary.rounded {
+	height: 38px !important;
+	min-height: 38px !important;
+	padding: 0.5rem 1rem !important;
+}
+
+/* Ensure icon and text are properly sized and aligned within button - no box around icon */
+.btn-primary.rounded.d-flex.align-items-center i,
+.btn-primary.rounded.d-flex.align-items-center .las,
+.btn-primary.rounded.d-flex.align-items-center .fa-plus,
+.btn-primary.rounded.d-flex.align-items-center i.las,
+.btn-primary.rounded.d-flex.align-items-center i.fa-plus {
+	font-size: 1rem !important;
+	line-height: 1 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	display: inline-block !important;
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	width: auto !important;
+	height: auto !important;
+	min-width: auto !important;
+	min-height: auto !important;
+	border-radius: 0 !important;
+	vertical-align: middle !important;
+}
+
+.btn-primary.rounded.d-flex.align-items-center span {
+	font-size: 0.875rem !important;
+	line-height: 1.5 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	white-space: nowrap !important;
+}
+
+/* ============================================
+   Mobile Responsive - Fix button text cutoff
+   ============================================ */
+
+/* Mobile devices - adjust button for smaller screens */
+@media only screen and (max-width: 767px) {
+	/* Reduce padding and font size on mobile */
+	.btn-primary.rounded.d-flex.align-items-center,
+	a.btn-primary.rounded.d-flex.align-items-center[data-bs-toggle="modal"] {
+		padding: 0.5rem 0.75rem !important;
+		font-size: 0.8125rem !important;
+		gap: 0.375rem !important;
+		min-width: auto !important;
+		flex-shrink: 0 !important;
+		flex-grow: 0 !important;
+	}
+	
+	/* Smaller font and allow wrapping on mobile */
+	.btn-primary.rounded.d-flex.align-items-center span {
+		font-size: 0.75rem !important;
+		white-space: nowrap !important;
+		line-height: 1.3 !important;
+		overflow: visible !important;
+	}
+	
+	/* Smaller icon on mobile */
+	.btn-primary.rounded.d-flex.align-items-center i,
+	.btn-primary.rounded.d-flex.align-items-center .las {
+		font-size: 0.875rem !important;
+		flex-shrink: 0 !important;
+	}
+	
+	/* Ensure button container allows wrapping and proper spacing */
+	.d-flex.align-items-center.mt-3.mt-sm-0 {
+		flex-wrap: wrap !important;
+		gap: 0.5rem !important;
+	}
+	
+	/* Adjust select boxes on mobile */
+	.d-flex.align-items-center.mt-3.mt-sm-0 select.default-select.style-1 {
+		flex: 1 1 auto !important;
+		min-width: 0 !important;
+		margin-right: 0 !important;
+		margin-bottom: 0.5rem !important;
+	}
+	
+	/* Make buttons fit properly on mobile */
+	.d-flex.align-items-center.mt-3.mt-sm-0 .btn-primary.rounded {
+		flex: 0 0 auto !important;
+		min-width: fit-content !important;
+	}
+}
+
+/* Very small mobile screens */
+@media only screen and (max-width: 575px) {
+	/* Further reduce button padding on very small screens */
+	.btn-primary.rounded.d-flex.align-items-center,
+	a.btn-primary.rounded.d-flex.align-items-center[data-bs-toggle="modal"] {
+		padding: 0.5rem 0.625rem !important;
+		gap: 0.25rem !important;
+	}
+	
+	/* Even smaller text on very small screens */
+	.btn-primary.rounded.d-flex.align-items-center span {
+		font-size: 0.7rem !important;
+	}
+	
+	/* Stack elements vertically on very small screens */
+	.d-flex.align-items-center.mt-3.mt-sm-0 {
+		flex-direction: column !important;
+		align-items: stretch !important;
+	}
+	
+	.d-flex.align-items-center.mt-3.mt-sm-0 select.default-select.style-1 {
+		width: 100% !important;
+		margin-right: 0 !important;
+		margin-bottom: 0.5rem !important;
+	}
+	
+	.d-flex.align-items-center.mt-3.mt-sm-0 .btn-primary.rounded {
+		width: 100% !important;
+		justify-content: center !important;
+	}
+}
+
+/* Ensure button content is properly aligned */
+.btn-primary.rounded.d-flex.align-items-center > * {
+	display: inline-flex !important;
+	align-items: center !important;
+	vertical-align: middle !important;
+}
+
+/* ============================================
+   Extra Large Screens (1400px and above)
+   ============================================ */
+@media only screen and (min-width: 1400px) {
+	.container {
+		max-width: 1320px;
+	}
+}
+
+/* ============================================
+   Large Screens (1200px - 1399px)
+   ============================================ */
+@media only screen and (max-width: 1399px) {
+	/* Adjust container padding */
+	.container {
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+}
+
+/* ============================================
+   Medium-Large Screens (992px - 1199px)
+   ============================================ */
+@media only screen and (max-width: 1199px) {
+	/* Sidebar adjustments */
+	.deznav {
+		position: fixed;
+		left: -100%;
+		transition: left 0.3s ease;
+		z-index: 9999;
+		height: 100vh;
+		overflow-y: auto;
+	}
+	
+	.deznav.menuon {
+		left: 0;
+	}
+	
+	.modern-production-sidebar {
+		position: fixed;
+		left: -100%;
+		transition: left 0.3s ease;
+		z-index: 9999;
+	}
+	
+	.modern-production-sidebar.menuon {
+		left: 0;
+	}
+	
+	/* Content area adjustments */
+	.content-body {
+		margin-left: 0 !important;
+		padding: 1rem;
+	}
+	
+	/* Header adjustments */
+	.header {
+		margin-left: 0;
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+	
+	/* Card adjustments */
+	.card {
+		margin-bottom: 1rem;
+	}
+	
+	/* Grid adjustments */
+	.row {
+		margin-left: -10px;
+		margin-right: -10px;
+	}
+	
+	.row > * {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+}
+
+/* ============================================
+   Tablets (768px - 991px)
+   ============================================ */
+@media only screen and (max-width: 991px) {
+	/* Typography */
+	h1 { font-size: 1.75rem; }
+	h2 { font-size: 1.5rem; }
+	h3 { font-size: 1.25rem; }
+	h4 { font-size: 1.1rem; }
+	h5 { font-size: 1rem; }
+	h6 { font-size: 0.9rem; }
+	
+	/* Page titles */
+	.page-titles {
+		flex-direction: column;
+		align-items: flex-start !important;
+		gap: 1rem;
+	}
+	
+	.page-titles .breadcrumb {
+		margin-top: 0.5rem;
+	}
+	
+	/* Forms - Stack grid columns */
+	.customer-section,
+	.order-section,
+	.form-section,
+	.details-section {
+		grid-template-columns: 1fr !important;
+		gap: 1rem !important;
+	}
+	
+	/* Form containers */
+	.order-form,
+	.form-container,
+	.form-wrapper {
+		padding: 1.5rem !important;
+	}
+	
+	/* Form header */
+	.form-header .company-info {
+		flex-direction: column;
+		text-align: center;
+		gap: 1rem;
+	}
+	
+	.form-header .company-logo {
+		margin: 0 auto;
+	}
+	
+	.form-header .document-title {
+		font-size: 1.5rem;
+		margin-top: 1rem;
+	}
+	
+	/* Tables - Make scrollable */
+	.table-responsive {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	
+	table {
+		min-width: 600px;
+		font-size: 0.9rem;
+	}
+	
+	table th,
+	table td {
+		padding: 0.5rem 0.75rem;
+		white-space: nowrap;
+	}
+	
+	.order-table,
+	.receipt-table,
+	.requisition-table,
+	.payment-table,
+	.form-table {
+		font-size: 0.85rem;
+	}
+	
+	.order-table th,
+	.receipt-table th,
+	.requisition-table th,
+	.payment-table th,
+	.form-table th {
+		padding: 0.5rem;
+		font-size: 0.75rem;
+	}
+	
+	/* Status progress bars */
+	.status-progress-bar {
+		flex-direction: column !important;
+		gap: 0.5rem !important;
+	}
+	
+	.status-arrow {
+		transform: rotate(90deg);
+	}
+	
+	.status-step {
+		width: 100% !important;
+		min-width: 100% !important;
+	}
+	
+	/* POS layouts */
+	.pos-container {
+		flex-direction: column;
+		height: auto;
+	}
+	
+	.pos-products-panel,
+	.pos-cart-panel {
+		width: 100%;
+		min-height: 400px;
+	}
+	
+	/* Dashboard cards */
+	.dashboard-card,
+	.kpi-card {
+		margin-bottom: 1rem;
+	}
+	
+	/* Button groups */
+	.btn-group {
+		flex-wrap: wrap;
+	}
+	
+	.btn-group .btn {
+		margin-bottom: 0.5rem;
+	}
+	
+	/* Navigation */
+	.navbar-nav {
+		flex-direction: column;
+	}
+	
+	/* Sidebar mobile menu button */
+	.navbar-toggler {
+		display: block;
+	}
+}
+
+/* ============================================
+   Mobile Landscape / Small Tablets (576px - 767px)
+   ============================================ */
+@media only screen and (max-width: 767px) {
+	/* Typography */
+	h1 { font-size: 1.5rem; }
+	h2 { font-size: 1.25rem; }
+	h3 { font-size: 1.1rem; }
+	h4 { font-size: 1rem; }
+	
+	/* Container padding */
+	.container,
+	.container-fluid {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+	
+	/* Content body */
+	.content-body {
+		padding: 0.75rem !important;
+	}
+	
+	/* Cards */
+	.card {
+		margin-bottom: 1rem;
+		border-radius: 8px;
+	}
+	
+	.card-body {
+		padding: 1rem !important;
+	}
+	
+	.card-header {
+		padding: 0.75rem 1rem !important;
+		font-size: 0.9rem;
+	}
+	
+	/* Forms */
+	.order-form,
+	.form-container,
+	.form-wrapper {
+		padding: 1rem !important;
+		border-radius: 8px;
+	}
+	
+	.form-group {
+		margin-bottom: 1rem;
+	}
+	
+	.form-label {
+		font-size: 0.9rem;
+		margin-bottom: 0.5rem;
+	}
+	
+	.form-control,
+	.form-select,
+	.input-group {
+		font-size: 0.9rem;
+		padding: 0.5rem 0.75rem;
+	}
+	
+	/* Form sections - Force single column */
+	.customer-section,
+	.order-section,
+	.form-section,
+	.details-section,
+	.grid-2,
+	.grid-3,
+	.grid-4 {
+		grid-template-columns: 1fr !important;
+		gap: 1rem !important;
+	}
+	
+	/* Form header mobile */
+	.form-header {
+		padding-bottom: 1rem;
+		margin-bottom: 1.5rem;
+	}
+	
+	.form-header .company-info {
+		flex-direction: column;
+		text-align: center;
+		gap: 0.75rem;
+	}
+	
+	.form-header .company-logo {
+		width: 50px;
+		height: 50px;
+		font-size: 1.5rem;
+	}
+	
+	.form-header .company-name {
+		font-size: 1rem;
+	}
+	
+	.form-header .company-address,
+	.form-header .company-contact {
+		font-size: 0.8rem;
+	}
+	
+	.form-header .document-title {
+		font-size: 1.25rem;
+		margin-top: 0.75rem;
+	}
+	
+	/* Tables - Enhanced scrolling */
+	.table-responsive {
+		display: block;
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		border: 1px solid #dee2e6;
+		border-radius: 4px;
+	}
+	
+	table {
+		width: 100%;
+		min-width: 600px;
+		margin-bottom: 0;
+		font-size: 0.85rem;
+	}
+	
+	table thead {
+		display: table-header-group;
+	}
+	
+	table tbody {
+		display: table-row-group;
+	}
+	
+	table th,
+	table td {
+		padding: 0.5rem;
+		font-size: 0.8rem;
+		white-space: nowrap;
+	}
+	
+	.order-table,
+	.receipt-table,
+	.requisition-table,
+	.payment-table,
+	.form-table {
+		font-size: 0.8rem;
+	}
+	
+	.order-table th,
+	.receipt-table th,
+	.requisition-table th,
+	.payment-table th,
+	.form-table th {
+		padding: 0.4rem 0.5rem;
+		font-size: 0.7rem;
+	}
+	
+	.order-table td,
+	.receipt-table td,
+	.requisition-table td,
+	.payment-table td,
+	.form-table td {
+		padding: 0.4rem 0.5rem;
+	}
+	
+	/* Buttons */
+	.btn {
+		font-size: 0.875rem;
+		padding: 0.5rem 1rem;
+		white-space: normal;
+		word-wrap: break-word;
+	}
+	
+	.btn-sm {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.5rem;
+	}
+	
+	.btn-lg {
+		font-size: 1rem;
+		padding: 0.75rem 1.5rem;
+	}
+	
+	/* Button groups - Stack vertically */
+	.form-actions,
+	.btn-group,
+	.action-buttons {
+		flex-direction: column;
+		gap: 0.5rem;
+		width: 100%;
+	}
+	
+	.form-actions .btn,
+	.btn-group .btn,
+	.action-buttons .btn {
+		width: 100%;
+		margin: 0;
+	}
+	
+	/* Status progress bars */
+	.status-progress-bar {
+		flex-direction: column !important;
+		gap: 0.75rem !important;
+		padding: 0.5rem 0 !important;
+	}
+	
+	.status-arrow {
+		transform: rotate(90deg);
+		margin: 0.25rem 0;
+	}
+	
+	.status-step {
+		width: 100% !important;
+		min-width: 100% !important;
+		font-size: 0.75rem !important;
+		padding: 0.5rem !important;
+		text-align: center;
+	}
+	
+	/* POS layouts */
+	.pos-container {
+		flex-direction: column;
+		height: auto;
+		gap: 1rem;
+	}
+	
+	.pos-products-panel {
+		width: 100%;
+		min-height: 300px;
+		max-height: 400px;
+	}
+	
+	.pos-cart-panel {
+		width: 100%;
+		min-height: 300px;
+	}
+	
+	/* Dashboard */
+	.dashboard-row {
+		flex-direction: column;
+	}
+	
+	.dashboard-card,
+	.kpi-card {
+		width: 100%;
+		margin-bottom: 1rem;
+	}
+	
+	/* Header */
+	.header {
+		padding: 0.75rem 1rem;
+		flex-wrap: wrap;
+	}
+	
+	.header .header-left,
+	.header .header-right {
+		width: 100%;
+		justify-content: space-between;
+		margin-bottom: 0.5rem;
+	}
+	
+	/* Navigation */
+	.navbar {
+		padding: 0.5rem 1rem;
+	}
+	
+	.navbar-brand {
+		font-size: 1rem;
+	}
+	
+	/* Sidebar */
+	.deznav,
+	.modern-production-sidebar {
+		width: 280px;
+		max-width: 85vw;
+	}
+	
+	/* Generated letter/document sections */
+	.generated-letter-section {
+		padding: 0;
+	}
+	
+	.generated-letter {
+		padding: 1.5rem !important;
+		min-height: auto;
+		font-size: 0.9rem;
+	}
+	
+	.memo-header,
+	.memo-body,
+	.memo-footer {
+		font-size: 0.9rem;
+	}
+	
+	.blank-field {
+		min-width: 150px;
+	}
+	
+	/* Input groups */
+	.input-group {
+		flex-direction: column;
+	}
+	
+	.input-group .form-control,
+	.input-group .btn {
+		border-radius: 4px;
+		margin-bottom: 0.5rem;
+	}
+	
+	.input-group .input-group-text {
+		border-radius: 4px;
+		margin-bottom: 0.5rem;
+	}
+	
+	/* Modals */
+	.modal-dialog {
+		margin: 0.5rem;
+		max-width: calc(100% - 1rem);
+	}
+	
+	.modal-content {
+		border-radius: 8px;
+	}
+	
+	.modal-header,
+	.modal-body,
+	.modal-footer {
+		padding: 1rem;
+	}
+	
+	/* Alerts */
+	.alert {
+		font-size: 0.875rem;
+		padding: 0.75rem 1rem;
+	}
+	
+	/* Badges */
+	.badge {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.5rem;
+	}
+	
+	/* Page header adjustments */
+	.page-titles h2 {
+		font-size: 1.5rem !important;
+	}
+	
+	/* Form header with buttons - ensure proper stacking */
+	.page-titles .d-flex.align-items-center {
+		flex-direction: column !important;
+		align-items: stretch !important;
+		gap: 0.75rem !important;
+	}
+	
+	.page-titles .d-flex.align-items-center.mt-3.mt-sm-0 {
+		width: 100% !important;
+		margin-top: 0.75rem !important;
+	}
+	
+	/* Pagination */
+	.pagination {
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+	
+	.page-link {
+		padding: 0.375rem 0.5rem;
+		font-size: 0.875rem;
+	}
+	
+	/* Dropdowns */
+	.dropdown-menu {
+		font-size: 0.875rem;
+		max-width: 100%;
+	}
+	
+	/* Tabs */
+	.nav-tabs {
+		flex-wrap: wrap;
+		border-bottom: 1px solid #dee2e6;
+	}
+	
+	.nav-tabs .nav-item {
+		margin-bottom: 0.5rem;
+	}
+	
+	.nav-tabs .nav-link {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.875rem;
+	}
+	
+	/* Tooltips and popovers */
+	.tooltip,
+	.popover {
+		font-size: 0.75rem;
+		max-width: 90vw;
+	}
+}
+
+/* ============================================
+   Mobile Portrait (up to 575px)
+   ============================================ */
+@media only screen and (max-width: 575px) {
+	/* Typography - Further reduction */
+	h1 { font-size: 1.25rem; }
+	h2 { font-size: 1.1rem; }
+	h3 { font-size: 1rem; }
+	h4 { font-size: 0.95rem; }
+	h5 { font-size: 0.9rem; }
+	h6 { font-size: 0.85rem; }
+	
+	body {
+		font-size: 0.875rem;
+		line-height: 1.5;
+	}
+	
+	/* Container */
+	.container,
+	.container-fluid {
+		padding-left: 8px;
+		padding-right: 8px;
+	}
+	
+	/* Content body */
+	.content-body {
+		padding: 0.5rem !important;
+	}
+	
+	/* Cards */
+	.card {
+		margin-bottom: 0.75rem;
+		border-radius: 6px;
+	}
+	
+	.card-body {
+		padding: 0.75rem !important;
+	}
+	
+	.card-header {
+		padding: 0.5rem 0.75rem !important;
+		font-size: 0.85rem;
+	}
+	
+	.card-title {
+		font-size: 1rem;
+	}
+	
+	/* Forms */
+	.order-form,
+	.form-container,
+	.form-wrapper {
+		padding: 0.75rem !important;
+	}
+	
+	.form-group {
+		margin-bottom: 0.75rem;
+	}
+	
+	.form-label {
+		font-size: 0.85rem;
+		margin-bottom: 0.375rem;
+	}
+	
+	.form-control,
+	.form-select {
+		font-size: 0.85rem;
+		padding: 0.45rem 0.65rem;
+		border-radius: 4px;
+	}
+	
+	/* Form header - Compact */
+	.form-header {
+		padding-bottom: 0.75rem;
+		margin-bottom: 1rem;
+	}
+	
+	.form-header .company-logo {
+		width: 45px;
+		height: 45px;
+		font-size: 1.25rem;
+	}
+	
+	.form-header .company-name {
+		font-size: 0.95rem;
+	}
+	
+	.form-header .company-address,
+	.form-header .company-contact {
+		font-size: 0.75rem;
+	}
+	
+	.form-header .document-title {
+		font-size: 1.1rem;
+		margin-top: 0.5rem;
+	}
+	
+	/* Tables - Even more compact */
+	table {
+		font-size: 0.75rem;
+		min-width: 500px;
+	}
+	
+	table th,
+	table td {
+		padding: 0.35rem 0.4rem;
+		font-size: 0.7rem;
+	}
+	
+	.order-table,
+	.receipt-table,
+	.requisition-table,
+	.payment-table,
+	.form-table {
+		font-size: 0.75rem;
+	}
+	
+	.order-table th,
+	.receipt-table th,
+	.requisition-table th,
+	.payment-table th,
+	.form-table th {
+		padding: 0.3rem 0.4rem;
+		font-size: 0.65rem;
+	}
+	
+	.order-table td,
+	.receipt-table td,
+	.requisition-table td,
+	.payment-table td,
+	.form-table td {
+		padding: 0.3rem 0.4rem;
+		font-size: 0.7rem;
+	}
+	
+	/* Buttons - Full width */
+	.btn {
+		font-size: 0.8rem;
+		padding: 0.45rem 0.9rem;
+		width: 100%;
+		margin-bottom: 0.5rem;
+	}
+	
+	.btn:last-child {
+		margin-bottom: 0;
+	}
+	
+	.btn-sm {
+		font-size: 0.7rem;
+		padding: 0.2rem 0.4rem;
+	}
+	
+	.btn-lg {
+		font-size: 0.95rem;
+		padding: 0.65rem 1.25rem;
+	}
+	
+	/* Status steps - Very compact */
+	.status-step {
+		font-size: 0.7rem !important;
+		padding: 0.4rem !important;
+	}
+	
+	/* Generated letter - Compact */
+	.generated-letter {
+		padding: 1rem !important;
+		font-size: 0.85rem;
+	}
+	
+	.memo-header,
+	.memo-body,
+	.memo-footer {
+		font-size: 0.85rem;
+	}
+	
+	.blank-field {
+		min-width: 120px;
+		font-size: 0.85rem;
+	}
+	
+	/* Modals - Full screen on very small devices */
+	.modal-dialog {
+		margin: 0;
+		max-width: 100%;
+		height: 100%;
+	}
+	
+	.modal-content {
+		border-radius: 0;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.modal-body {
+		flex: 1;
+		overflow-y: auto;
+	}
+	
+	/* Header - Compact */
+	.header {
+		padding: 0.5rem 0.75rem;
+	}
+	
+	.header .navbar-brand {
+		font-size: 0.9rem;
+	}
+	
+	/* Sidebar - Narrower */
+	.deznav,
+	.modern-production-sidebar {
+		width: 260px;
+		max-width: 90vw;
+	}
+	
+	/* KPI Cards */
+	.card-bd .num-text {
+		font-size: 18px !important;
+	}
+	
+	/* Page titles */
+	.page-titles h3 {
+		font-size: 1rem;
+	}
+	
+	.page-titles .breadcrumb {
+		font-size: 0.75rem;
+	}
+	
+	/* Images */
+	img {
+		max-width: 100%;
+		height: auto;
+	}
+	
+	/* Lists */
+	.list-group-item {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.85rem;
+	}
+	
+	/* Alerts */
+	.alert {
+		font-size: 0.8rem;
+		padding: 0.65rem 0.85rem;
+	}
+	
+	/* Badges */
+	.badge {
+		font-size: 0.7rem;
+		padding: 0.2rem 0.4rem;
+	}
+	
+	/* Pagination - Compact */
+	.pagination {
+		margin-bottom: 0.5rem;
+	}
+	
+	.page-link {
+		padding: 0.3rem 0.4rem;
+		font-size: 0.8rem;
+		min-width: 32px;
+	}
+	
+	/* Dropdowns */
+	.dropdown-menu {
+		font-size: 0.8rem;
+		max-width: calc(100vw - 1rem);
+	}
+	
+	.dropdown-item {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.8rem;
+	}
+	
+	/* Tabs - Stack */
+	.nav-tabs {
+		flex-direction: column;
+		border-bottom: none;
+	}
+	
+	.nav-tabs .nav-item {
+		width: 100%;
+		margin-bottom: 0.25rem;
+		border-bottom: 1px solid #dee2e6;
+	}
+	
+	.nav-tabs .nav-link {
+		width: 100%;
+		text-align: left;
+		padding: 0.5rem;
+		border: none;
+		border-radius: 0;
+	}
+	
+	/* Tooltips */
+	.tooltip {
+		font-size: 0.7rem;
+		max-width: 85vw;
+	}
+	
+	/* Popovers */
+	.popover {
+		font-size: 0.7rem;
+		max-width: 85vw;
+	}
+	
+	.popover-header {
+		font-size: 0.8rem;
+		padding: 0.5rem 0.75rem;
+	}
+	
+	.popover-body {
+		font-size: 0.75rem;
+		padding: 0.5rem 0.75rem;
+	}
+}
+
+/* ============================================
+   Very Small Mobile (up to 360px)
+   ============================================ */
+@media only screen and (max-width: 360px) {
+	/* Further size reductions */
+	h1 { font-size: 1.1rem; }
+	h2 { font-size: 1rem; }
+	h3 { font-size: 0.95rem; }
+	
+	body {
+		font-size: 0.8rem;
+	}
+	
+	.container,
+	.container-fluid {
+		padding-left: 5px;
+		padding-right: 5px;
+	}
+	
+	.card-body {
+		padding: 0.5rem !important;
+	}
+	
+	.form-control,
+	.form-select {
+		font-size: 0.8rem;
+		padding: 0.4rem 0.6rem;
+	}
+	
+	.btn {
+		font-size: 0.75rem;
+		padding: 0.4rem 0.8rem;
+	}
+	
+	table {
+		font-size: 0.7rem;
+		min-width: 450px;
+	}
+	
+	table th,
+	table td {
+		padding: 0.25rem 0.3rem;
+		font-size: 0.65rem;
+	}
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+@media print {
+	/* Hide non-essential elements */
+	.header,
+	.sidebar,
+	.deznav,
+	.modern-production-sidebar,
+	.navbar,
+	.btn,
+	.form-actions,
+	.page-titles .breadcrumb {
+		display: none !important;
+	}
+	
+	/* Full width for print */
+	.content-body {
+		margin-left: 0 !important;
+		padding: 0 !important;
+	}
+	
+	/* Page breaks */
+	.page-break {
+		page-break-after: always;
+	}
+	
+	/* Avoid breaking tables */
+	table {
+		page-break-inside: avoid;
+	}
+	
+	/* Print-friendly colors */
+	* {
+		color: #000 !important;
+		background: #fff !important;
+	}
+}
+
+/* ============================================
+   Landscape Orientation (Mobile)
+   ============================================ */
+@media only screen and (max-width: 991px) and (orientation: landscape) {
+	/* Optimize for landscape */
+	.content-body {
+		padding: 0.5rem !important;
+	}
+	
+	.card-body {
+		padding: 0.75rem !important;
+	}
+	
+	/* Tables can be wider in landscape */
+	table {
+		min-width: 700px;
+	}
+}
+
+/* ============================================
+   High DPI Displays
+   ============================================ */
+@media only screen and (-webkit-min-device-pixel-ratio: 2),
+	only screen and (min-resolution: 192dpi) {
+	/* Ensure crisp rendering on retina displays */
+	img,
+	svg {
+		image-rendering: -webkit-optimize-contrast;
+		image-rendering: crisp-edges;
+	}
+}
+
+/* ============================================
+   Accessibility - Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ============================================
+   Utility Classes for Responsive Design
+   ============================================ */
+
+/* Hide on mobile */
+.d-none-mobile {
+	display: block !important;
+}
+
+@media only screen and (max-width: 767px) {
+	.d-none-mobile {
+		display: none !important;
+	}
+}
+
+/* Show only on mobile */
+.d-mobile-only {
+	display: none !important;
+}
+
+@media only screen and (max-width: 767px) {
+	.d-mobile-only {
+		display: block !important;
+	}
+}
+
+/* Hide on tablet and below */
+.d-none-tablet {
+	display: block !important;
+}
+
+@media only screen and (max-width: 991px) {
+	.d-none-tablet {
+		display: none !important;
+	}
+}
+
+/* Full width on mobile */
+.w-mobile-full {
+	width: auto;
+}
+
+@media only screen and (max-width: 767px) {
+	.w-mobile-full {
+		width: 100% !important;
+	}
+}
+
+/* Text alignment */
+.text-mobile-center {
+	text-align: left;
+}
+
+@media only screen and (max-width: 767px) {
+	.text-mobile-center {
+		text-align: center !important;
+	}
+}
+
+/* Padding adjustments */
+.p-mobile-sm {
+	padding: inherit;
+}
+
+@media only screen and (max-width: 767px) {
+	.p-mobile-sm {
+		padding: 0.5rem !important;
+	}
+}
+
+/* Margin adjustments */
+.m-mobile-sm {
+	margin: inherit;
+}
+
+@media only screen and (max-width: 767px) {
+	.m-mobile-sm {
+		margin: 0.5rem !important;
+	}
+}
+
+/* ============================================
+   Fix Common Responsive Issues
+   ============================================ */
+
+/* Prevent horizontal scroll */
+html,
+body {
+	overflow-x: hidden;
+	max-width: 100%;
+}
+
+/* Ensure containers don't overflow */
+.container,
+.container-fluid,
+.row {
+	max-width: 100%;
+}
+
+/* Fix flex items wrapping */
+.flex-wrap-mobile {
+	flex-wrap: nowrap;
+}
+
+@media only screen and (max-width: 767px) {
+	.flex-wrap-mobile {
+		flex-wrap: wrap !important;
+	}
+}
+
+/* Fix grid gaps on mobile */
+.grid-gap-mobile {
+	gap: 1rem;
+}
+
+@media only screen and (max-width: 767px) {
+	.grid-gap-mobile {
+		gap: 0.75rem !important;
+	}
+}
+
+/* Ensure inputs don't zoom on iOS */
+@media only screen and (max-width: 767px) {
+	input[type="text"],
+	input[type="email"],
+	input[type="number"],
+	input[type="tel"],
+	input[type="password"],
+	input[type="search"],
+	select,
+	textarea {
+		font-size: 16px !important; /* Prevents iOS zoom */
+	}
+}
+
+/* Fix sticky elements on mobile */
+@media only screen and (max-width: 767px) {
+	.sticky-top {
+		position: relative !important;
+	}
+}
+
+/* Ensure modals are centered on mobile */
+@media only screen and (max-width: 767px) {
+	.modal-dialog-centered {
+		min-height: calc(100% - 1rem);
+	}
+}

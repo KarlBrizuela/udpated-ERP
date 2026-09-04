@@ -1,0 +1,694 @@
+/* Fix KPI number overflow for large numbers (millions) */
+.card-bd .num-text {
+	font-size: 36px !important;
+	line-height: 1.1;
+	max-width: 100%;
+	display: block;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+@media only screen and (max-width: 1400px) {
+	.card-bd .num-text {
+		font-size: 28px !important;
+	}
+}
+
+@media only screen and (max-width: 1200px) {
+	.card-bd .num-text {
+		font-size: 24px !important;
+	}
+}
+
+@media only screen and (max-width: 992px) {
+	.card-bd .num-text {
+		font-size: 20px !important;
+	}
+}
+
+@media only screen and (max-width: 768px) {
+	.card-bd .num-text {
+		font-size: 18px !important;
+	}
+}
+
+/* Ensure media-body doesn't overflow */
+.card-bd .media-body {
+	min-width: 0;
+	flex: 1;
+}
+
+/* Prevent number from breaking card layout */
+.card-bd .media {
+	overflow: hidden;
+}
+
+.card-bd .box-style {
+	overflow: hidden;
+}
+
+/* Fix sidebar icon disappearing issue (for old metismenu sidebars) */
+.deznav .metismenu li>a i,
+.deznav .metismenu li>a .ai-icon i,
+.deznav .metismenu li>a .flaticon,
+.deznav .metismenu li>a .las,
+.deznav .metismenu li>a .fa {
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	width: auto !important;
+	height: auto !important;
+}
+
+/* Ensure sidebar icons are always visible (for old metismenu sidebars) */
+.deznav .ai-icon {
+	display: flex !important;
+	align-items: center !important;
+}
+
+.deznav .ai-icon i {
+	margin-right: 0.5rem;
+	font-size: 1.25rem;
+}
+
+/* ============================================
+   Modern Production Division Sidebar
+   ============================================ */
+
+/* Base sidebar container */
+.modern-production-sidebar {
+	background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+	box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+	height: 100vh !important;
+	overflow: hidden !important;
+	display: flex;
+	flex-direction: column;
+}
+
+.modern-sidebar-scroll {
+	padding: 1rem 0;
+	flex: 1 1 0;
+	min-height: 0;
+	overflow-y: auto !important;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(180, 0, 0, 0.35) transparent;
+}
+
+/* Custom Scrollbar for Modern Sidebar — webkit browsers */
+.modern-sidebar-scroll::-webkit-scrollbar {
+	width: 5px;
+}
+
+.modern-sidebar-scroll::-webkit-scrollbar-track {
+	background: rgba(0, 0, 0, 0.04);
+	border-radius: 10px;
+}
+
+.modern-sidebar-scroll::-webkit-scrollbar-thumb {
+	background: rgba(180, 0, 0, 0.4);
+	border-radius: 10px;
+	transition: background 0.2s;
+}
+
+.modern-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+	background: rgba(180, 0, 0, 0.7);
+}
+
+/* Navigation menu */
+.modern-nav-menu {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+/* Navigation items */
+.modern-nav-item {
+	display: flex !important;
+	align-items: center !important;
+	padding: 0.75rem 1rem !important;
+	margin: 0 0.5rem !important;
+	text-decoration: none !important;
+	color: #495057 !important;
+	border-radius: 12px !important;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+	position: relative !important;
+	cursor: pointer !important;
+	font-weight: 500 !important;
+	font-size: 14px !important;
+	background: transparent !important;
+	border: none !important;
+	pointer-events: auto !important;
+	z-index: 10 !important;
+}
+
+.modern-nav-item:hover {
+	background: rgba(255, 0, 0, 0.08) !important;
+	color: #ff0000 !important;
+	transform: translateX(4px) !important;
+}
+
+/* Icon container - ALWAYS VISIBLE */
+.modern-nav-icon {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 36px !important;
+	min-width: 36px !important;
+	height: 36px !important;
+	margin-right: 0.75rem !important;
+	border-radius: 10px !important;
+	background: rgba(255, 0, 0, 0.05) !important;
+	transition: all 0.3s ease !important;
+	flex-shrink: 0 !important;
+	position: relative !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+.modern-nav-icon i {
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	font-size: 20px !important;
+	color: #495057 !important;
+	transition: all 0.3s ease !important;
+	position: relative !important;
+	left: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	width: auto !important;
+	height: auto !important;
+}
+
+.modern-nav-item:hover .modern-nav-icon {
+	background: rgba(255, 0, 0, 0.1) !important;
+	transform: scale(1.05) !important;
+}
+
+.modern-nav-item:hover .modern-nav-icon i {
+	color: #ff0000 !important;
+}
+
+/* Label text */
+.modern-nav-label {
+	flex: 1 !important;
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	white-space: nowrap !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	position: relative !important;
+	left: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	transition: color 0.3s ease !important;
+}
+
+/* Active state */
+.modern-nav-item.active,
+.modern-nav-item[data-page="dashboard"].active {
+	background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%) !important;
+	color: #ffffff !important;
+	box-shadow: 0 4px 12px rgba(255, 0, 0, 0.25) !important;
+}
+
+.modern-nav-item.active .modern-nav-icon,
+.modern-nav-item[data-page="dashboard"].active .modern-nav-icon {
+	background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.modern-nav-item.active .modern-nav-icon i,
+.modern-nav-item[data-page="dashboard"].active .modern-nav-icon i {
+	color: #ffffff !important;
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+.modern-nav-item.active .modern-nav-label,
+.modern-nav-item[data-page="dashboard"].active .modern-nav-label {
+	color: #ffffff !important;
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+/* Arrow for dropdown items */
+.modern-nav-arrow {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 20px !important;
+	height: 20px !important;
+	margin-left: auto !important;
+	font-size: 12px !important;
+	color: #6c757d !important;
+	transition: transform 0.3s ease !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+.modern-nav-group.active .modern-nav-arrow {
+	transform: rotate(90deg) !important;
+	color: #ff0000 !important;
+}
+
+/* Submenu */
+.modern-nav-submenu {
+	max-height: 0 !important;
+	overflow: hidden !important;
+	transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding-left 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+	padding-left: 0 !important;
+	margin: 0.15rem 0 0.25rem 0 !important;
+	list-style: none !important;
+}
+
+.modern-nav-group.active .modern-nav-submenu {
+	max-height: 800px !important;
+	padding-left: 0.75rem !important;
+}
+
+.modern-nav-subitem {
+	display: block !important;
+	padding: 0.5rem 1rem 0.5rem 3rem !important;
+	margin: 0.15rem 0.5rem !important;
+	text-decoration: none !important;
+	color: #6c757d !important;
+	border-radius: 8px !important;
+	font-size: 13px !important;
+	transition: all 0.3s ease !important;
+	position: relative !important;
+}
+
+.modern-nav-subitem::before {
+	content: '';
+	position: absolute;
+	left: 2.5rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 4px;
+	height: 4px;
+	background: #dee2e6;
+	border-radius: 50%;
+	transition: all 0.3s ease;
+}
+
+.modern-nav-subitem:hover {
+	background: rgba(255, 0, 0, 0.06) !important;
+	color: #ff0000 !important;
+	padding-left: 4rem !important;
+}
+
+.modern-nav-subitem:hover::before {
+	background: #ff0000;
+	width: 6px;
+	height: 6px;
+}
+
+.modern-nav-subitem.active {
+	background: rgba(255, 0, 0, 0.1) !important;
+	color: #ff0000 !important;
+	font-weight: 600 !important;
+}
+
+/* Footer */
+.modern-sidebar-footer {
+	padding: 1rem 1rem;
+	margin-top: auto;
+	border-top: 1px solid rgba(0, 0, 0, 0.05);
+	text-align: center;
+}
+
+.modern-sidebar-footer p {
+	margin: 0;
+	font-size: 11px;
+	color: #6c757d;
+	line-height: 1.6;
+}
+
+/* Ensure icons NEVER disappear - highest priority */
+.modern-production-sidebar .modern-nav-icon,
+.modern-production-sidebar .modern-nav-icon i,
+.modern-production-sidebar .modern-nav-item.active .modern-nav-icon,
+.modern-production-sidebar .modern-nav-item.active .modern-nav-icon i,
+.modern-production-sidebar .modern-nav-item:hover .modern-nav-icon,
+.modern-production-sidebar .modern-nav-item:hover .modern-nav-icon i,
+.modern-production-sidebar .modern-nav-group.active .modern-nav-icon,
+.modern-production-sidebar .modern-nav-group.active .modern-nav-icon i {
+	display: flex !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+.modern-production-sidebar .modern-nav-icon i {
+	display: inline-block !important;
+}
+
+/* Menu toggle state (collapsed sidebar) */
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .modern-production-sidebar .modern-nav-item {
+	padding: 0.75rem !important;
+	justify-content: center !important;
+}
+
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .modern-production-sidebar .modern-nav-icon {
+	margin-right: 0 !important;
+}
+
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .modern-production-sidebar .modern-nav-label {
+	display: none !important;
+}
+
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .modern-production-sidebar .modern-nav-arrow {
+	display: none !important;
+}
+
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .modern-production-sidebar .modern-nav-submenu {
+	display: none !important;
+}
+
+/* Prevent metismenu from affecting modern sidebar */
+.modern-production-sidebar .metismenu,
+.modern-production-sidebar #menu {
+	display: none !important;
+}
+
+/* Keep parent visible when submenu is hovered */
+.modern-nav-group.submenu-hovered .modern-nav-item,
+.modern-nav-group.active .modern-nav-item {
+	background: rgba(255, 0, 0, 0.08) !important;
+	color: #ff0000 !important;
+}
+
+.modern-nav-group.submenu-hovered .modern-nav-item .modern-nav-icon,
+.modern-nav-group.active .modern-nav-item .modern-nav-icon {
+	background: rgba(255, 0, 0, 0.1) !important;
+}
+
+.modern-nav-group.submenu-hovered .modern-nav-item .modern-nav-icon i,
+.modern-nav-group.active .modern-nav-item .modern-nav-icon i {
+	color: #ff0000 !important;
+	display: inline-block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+}
+
+/* Smooth animations */
+.modern-nav-group {
+	transition: all 0.3s ease;
+}
+
+.modern-nav-submenu {
+	background: rgba(0, 0, 0, 0.02);
+	border-radius: 0 0 12px 12px;
+	margin-top: 0.15rem;
+}
+
+/* Keep Confirm Add Book button text always black (no hover color change) */
+#confirmAddBookBtn,
+#confirmAddBookBtn:hover,
+#confirmAddBookBtn:focus {
+	color: #000 !important;
+	-webkit-text-fill-color: #000 !important;
+	text-shadow: none !important;
+	opacity: 1 !important;
+	box-shadow: none !important;
+}
+
+/* Ensure background stays the intended green on hover/focus */
+#confirmAddBookBtn:hover,
+#confirmAddBookBtn:focus {
+	background-color: #68CF29 !important;
+	border-color: #68CF29 !important;
+}
+
+/* Active group styling */
+.modern-nav-group.active .modern-nav-item {
+	background: rgba(255, 0, 0, 0.1) !important;
+	color: #ff0000 !important;
+}
+
+.modern-nav-group.active .modern-nav-item .modern-nav-icon {
+	background: rgba(255, 0, 0, 0.15) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991px) {
+	.modern-nav-item {
+		padding: 0.625rem 0.875rem !important;
+		margin: 0 0.375rem !important;
+	}
+
+	.modern-nav-icon {
+		width: 32px !important;
+		min-width: 32px !important;
+		height: 32px !important;
+	}
+}
+
+/* ============================================
+   Nav Header Logo - Hide text when sidebar collapsed
+   ============================================ */
+
+/* Hide brand-title (text logo) when sidebar is collapsed */
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .nav-header .brand-title {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+}
+
+/* Center and align the logo image when sidebar is collapsed */
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .nav-header .brand-logo {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 100% !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+/* Ensure logo image is centered and properly sized when collapsed */
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .nav-header .brand-logo img:first-of-type {
+	margin: 0 !important;
+	padding: 0 !important;
+	height: 52px !important;
+	width: auto !important;
+	max-width: 100% !important;
+	object-fit: contain !important;
+	display: block !important;
+}
+
+/* Hide the second image (text logo) when sidebar is collapsed */
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .nav-header .brand-logo .brand-title,
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .nav-header .brand-logo img.brand-title {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+	width: 0 !important;
+	height: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+/* Ensure nav-header is properly aligned when collapsed */
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .nav-header {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 0 !important;
+}
+
+/* Center brand-logo container when collapsed */
+[data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .nav-header .brand-logo {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 100% !important;
+	text-align: center !important;
+}
+
+/* ============================================
+   Mobile and Tablet Responsiveness
+   ============================================ */
+
+/* Mobile and Tablet Responsiveness */
+@media only screen and (max-width: 991px) {
+
+	/* Sidebar adjustments for mobile */
+	.deznav {
+		position: fixed;
+		left: -100%;
+		transition: left 0.3s ease;
+	}
+
+	.deznav.menuon {
+		left: 0;
+	}
+
+	/* Modern sidebar mobile adjustments */
+	.modern-production-sidebar {
+		position: fixed;
+		left: -100%;
+		transition: left 0.3s ease;
+		z-index: 9999;
+	}
+
+	.modern-production-sidebar.menuon {
+		left: 0;
+	}
+
+	/* Status bar responsive */
+	.status-progress-bar {
+		flex-direction: column !important;
+		gap: 0.5rem !important;
+	}
+
+	.status-arrow {
+		transform: rotate(90deg);
+	}
+
+	.status-step {
+		width: 100% !important;
+		min-width: 100% !important;
+	}
+
+	/* Form adjustments */
+	.customer-section {
+		grid-template-columns: 1fr !important;
+	}
+
+	.order-form {
+		padding: 1rem !important;
+	}
+
+	/* POS adjustments */
+	.pos-container {
+		flex-direction: column;
+		height: auto;
+	}
+
+	.pos-products-panel,
+	.pos-cart-panel {
+		width: 100%;
+	}
+}
+
+@media only screen and (max-width: 768px) {
+
+	/* Table responsive */
+	.order-table,
+	.receipt-table,
+	.requisition-table {
+		font-size: 0.85rem;
+	}
+
+	.order-table th,
+	.receipt-table th,
+	.requisition-table th {
+		padding: 0.5rem;
+		font-size: 0.75rem;
+	}
+
+	/* Button groups */
+	.form-actions {
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.form-actions .btn {
+		width: 100%;
+	}
+
+	/* Form header responsive */
+	.form-header .company-info {
+		flex-direction: column;
+		text-align: center;
+	}
+}
+
+@media only screen and (max-width: 576px) {
+
+	/* Further mobile optimizations */
+	.page-titles {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.card-body {
+		padding: 1rem;
+	}
+
+	/* Status steps smaller on mobile */
+	.status-step {
+		font-size: 0.75rem !important;
+		padding: 0.4rem !important;
+	}
+}
+
+/* Content Body Layout Fixes - Restored with !important to ensure containment */
+.content-body {
+	margin-left: 18rem;
+	padding-top: 5.5rem !important;
+	min-height: calc(100vh - 5.5rem) !important;
+	transition: all 0.2s ease;
+}
+
+/* Sidebar Collapsed State */
+[data-sidebar-style="mini"] .content-body,
+.menu-toggle .content-body {
+	margin-left: 5rem !important;
+}
+
+/* Mobile Adjustments */
+@media only screen and (max-width: 1199px) {
+	.content-body {
+		margin-left: 0 !important;
+		padding-top: 5rem !important;
+	}
+}
+
+/* Logistic View Specific Fixes */
+.receipt-form {
+	max-width: 900px;
+	margin: 0 auto;
+	padding: 2rem;
+	background: #fff;
+}
+
+/* Sidebar Navigation Fix - Better layout management */
+.modern-sidebar-scroll {
+	overflow-y: auto !important;
+	overflow-x: hidden !important;
+	height: auto !important;
+	padding-bottom: 2rem !important;
+}
+
+.modern-nav-menu {
+	width: 100% !important;
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 0.25rem !important;
+}
+
+/* Ensure Finance/submenu doesn't break layout */
+.modern-nav-group {
+	width: 100% !important;
+	flex-shrink: 0 !important;
+}
+
+/* Prevent nav items from disappearing due to overflow */
+.modern-nav-item,
+.modern-nav-subitem {
+	width: 100% !important;
+	box-sizing: border-box !important;
+}
+
+/* Expanded submenu should not break visibility */
+.modern-nav-group.active .modern-nav-submenu {
+	width: 100% !important;
+	box-sizing: border-box !important;
+}
