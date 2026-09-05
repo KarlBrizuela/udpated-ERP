@@ -18,31 +18,10 @@ class LogisticController extends Controller
     {
         return $query->where(function ($q) {
             $q->whereDoesntHave('areaSalesStaff', function ($u) {
-                $u->where(function ($sq) {
-                    $sq->whereNotNull('sales_team')->where('sales_team', '!=', '')
-                       ->orWhere('email', 'like', 'marketing_team%');
-                });
+                $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
             })
             ->whereDoesntHave('preparedBy', function ($u) {
-                $u->where(function ($sq) {
-                    $sq->whereNotNull('sales_team')->where('sales_team', '!=', '')
-                       ->orWhere('email', 'like', 'marketing_team%');
-                });
-            })
-            ->whereDoesntHave('customer', function ($c) {
-                $c->where(function ($sq) {
-                    $sq->where('customer_type', 'like', '%TEAM%')
-                       ->orWhere('company_name', 'like', '%TEAM A%')
-                       ->orWhere('company_name', 'like', '%TEAM B%')
-                       ->orWhere('company_name', 'like', '%TEAM C%')
-                       ->orWhere('customer_name', 'like', '%TEAM A%')
-                       ->orWhere('customer_name', 'like', '%TEAM B%')
-                       ->orWhere('customer_name', 'like', '%TEAM C%');
-                });
-            })
-            ->where(function ($sq) {
-                $sq->whereNull('remarks')
-                   ->orWhere('remarks', 'not like', '%[SITE: Team%');
+                $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
             });
         });
     }
@@ -52,29 +31,11 @@ class LogisticController extends Controller
         return $query->whereDoesntHave('salesOrder', function ($soQuery) {
             $soQuery->where(function ($q) {
                 $q->whereHas('areaSalesStaff', function ($u) {
-                    $u->where(function ($sq) {
-                        $sq->whereNotNull('sales_team')->where('sales_team', '!=', '')
-                           ->orWhere('email', 'like', 'marketing_team%');
-                    });
+                    $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
                 })
                 ->orWhereHas('preparedBy', function ($u) {
-                    $u->where(function ($sq) {
-                        $sq->whereNotNull('sales_team')->where('sales_team', '!=', '')
-                           ->orWhere('email', 'like', 'marketing_team%');
-                    });
-                })
-                ->orWhereHas('customer', function ($c) {
-                    $c->where(function ($sq) {
-                        $sq->where('customer_type', 'like', '%TEAM%')
-                           ->orWhere('company_name', 'like', '%TEAM A%')
-                           ->orWhere('company_name', 'like', '%TEAM B%')
-                           ->orWhere('company_name', 'like', '%TEAM C%')
-                           ->orWhere('customer_name', 'like', '%TEAM A%')
-                           ->orWhere('customer_name', 'like', '%TEAM B%')
-                           ->orWhere('customer_name', 'like', '%TEAM C%');
-                    });
-                })
-                ->orWhere('remarks', 'like', '%[SITE: Team%');
+                    $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
+                });
             });
         });
     }
@@ -1918,23 +1879,12 @@ class LogisticController extends Controller
              return redirect()->back()->with('error', 'Only Super Admins, Accounting Staff, or Production/Logistics Managers, Supervisors, Heads, Senior Logistics Staff, or Logistics Staff can approve Delivery Receipts.');
         }
 
-        $order = \App\Models\SalesOrder::with(['customer', 'preparedBy', 'areaSalesStaff'])->findOrFail($id);
+        $order = \App\Models\SalesOrder::findOrFail($id);
         $isAccountingContext = request()->is('admin-finance*') || str_contains(url()->previous(), 'admin-finance') || str_contains(request()->header('referer', ''), 'admin-finance') || $this->isAccountingOrderOrDr($order);
         $isCharge = $order->type === 'charge' || strtolower($order->transaction_type ?? '') === 'charge';
         $hasSI = !empty($order->si_prepared_at) || !empty($order->si_number) || \App\Models\SalesInvoice::where('so_id', $order->id)->exists();
         
-        $isTeamOrder = !empty($order->preparedBy?->sales_team)
-            || !empty($order->areaSalesStaff?->sales_team)
-            || str_starts_with($order->preparedBy?->email ?? '', 'marketing_team')
-            || str_starts_with($order->areaSalesStaff?->email ?? '', 'marketing_team')
-            || stripos($order->customer?->customer_type ?? '', 'TEAM') !== false
-            || stripos($order->customer?->company_name ?? '', 'TEAM') !== false
-            || stripos($order->customer?->customer_name ?? '', 'TEAM') !== false
-            || str_contains($order->remarks ?? '', '[SITE: Team');
-
-        if ($isTeamOrder) {
-            $newStatus = 'completed';
-        } elseif ($isCharge || $hasSI) {
+        if ($isCharge || $hasSI) {
             $newStatus = 'ready_for_packing';
         } elseif ($isAccountingContext && !in_array($order->type, ['area_consignment', 'area_sales_consignment', 'direct_consignment']) && $order->transaction_type !== 'consignment') {
             $newStatus = 'pending_si_prep';
@@ -2301,7 +2251,7 @@ class LogisticController extends Controller
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getPathname());
             $sheet       = $spreadsheet->getActiveSheet();
 
-            // ── Verify SO number matches the row's order ────────────
+            // ── Verify SO number matches the row's order ───────────
             $soNumberFromFile = trim((string) $sheet->getCell('B2')->getValue());
 
             $order = \App\Models\SalesOrder::with('items')
@@ -2315,7 +2265,7 @@ class LogisticController extends Controller
                 ]);
             }
 
-            // ── Read Customer Name from B7 ─────────────────────────
+            // ── Read Customer Name from B7 ───────────────────────
             $customerName = trim((string) $sheet->getCell('B7')->getValue());
 
             if (!empty($customerName)) {
@@ -2335,7 +2285,7 @@ class LogisticController extends Controller
                 $order->update(['customer_id' => $customer->customer_id]);
             }
 
-            // ── Read Pick Qty from column G, starting row 10 ─────────
+            // ── Read Pick Qty from column G, starting row 10 ────────
             // (Meta = rows 2-7, blank = row 8, header = row 9, data = row 10+)
             $dataStartRow = 10;
             $pickQtyCol   = 'G';
@@ -2604,7 +2554,7 @@ class LogisticController extends Controller
                                   ->where('packing_data->status', '<>', 'gathered');
                       });
             });
-        $this->excludeTeamSalesOrders($packingOrdersQuery);
+        // Do not exclude ready_for_packing Sales Orders from Packing Queue
         $packingOrders = $packingOrdersQuery->orderBy('id', 'desc')->get();
 
         // Get complimentary orders ready for packing - EXCLUDING Team A, B, C
@@ -3335,7 +3285,7 @@ class LogisticController extends Controller
         $status = $request->query('status', 'all');
         $search = $request->query('search');
 
-        $query = \App\Models\FreightQuotation::with(['createdBy', 'respondedBy', 'salesOrder', 'customer']);
+        $query = \App\Models\FreightQuotation::with(['createdBy', 'respondedBy']);
 
         if ($status === 'pending') {
             $query->whereIn('workflow_status', ['draft', 'pending_logistics'])
@@ -3351,21 +3301,9 @@ class LogisticController extends Controller
                   ->orWhere('origin_province', 'like', '%' . $search . '%')
                   ->orWhere('destination_province', 'like', '%' . $search . '%')
                   ->orWhere('service_mode', 'like', '%' . $search . '%')
-                  ->orWhere('forwarder', 'like', '%' . $search . '%')
                   ->orWhere('customer_representative', 'like', '%' . $search . '%')
                   ->orWhereHas('createdBy', function($u) use ($search) {
-                      $u->where(function($sub) use ($search) {
-                          $sub->where('first_name', 'like', '%' . $search . '%')
-                              ->orWhere('last_name', 'like', '%' . $search . '%')
-                              ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ['%' . $search . '%']);
-                      });
-                  })
-                  ->orWhereHas('salesOrder', function($so) use ($search) {
-                      $so->where('so_number', 'like', '%' . $search . '%')
-                         ->orWhere('forwarder', 'like', '%' . $search . '%');
-                  })
-                  ->orWhereHas('customer', function($c) use ($search) {
-                      $c->where('customer_name', 'like', '%' . $search . '%');
+                      $u->where('name', 'like', '%' . $search . '%');
                   });
             });
         }
@@ -3403,7 +3341,6 @@ class LogisticController extends Controller
         try {
 
             $validated = $request->validate([
-                'forwarder' => 'nullable|string|max:255',
                 'estimated_freight' => 'nullable|numeric|min:0',
                 'valuation_percentage' => 'nullable|numeric|min:0|max:100',
                 'handling_percentage' => 'nullable|numeric|min:0|max:100',
@@ -3424,11 +3361,9 @@ class LogisticController extends Controller
             $valuationCharge = 0;
             $handlingFee = ($estimatedFreight * $handlingPercent) / 100;
             $totalAmount = $estimatedFreight + $handlingFee;
-            $forwarder = $validated['forwarder'] ?? $freightQuotation->forwarder ?? null;
 
             // Update quotation with logistics response
             $freightQuotation->update([
-                'forwarder' => $forwarder,
                 'estimated_freight' => $estimatedFreight,
                 'valuation_percentage' => $valuationPercent,
                 'valuation_charge' => $valuationCharge,
@@ -3450,7 +3385,7 @@ class LogisticController extends Controller
                     $salesOrder->update([
                         'freight_charges' => $totalAmount,
                         'freight_option' => $freightQuotation->freight_option,
-                        'forwarder' => $forwarder ?? $salesOrder->forwarder,
+                        'forwarder' => $freightQuotation->forwarder,
                         'freight_notes' => 'Freight approved: ' . number_format($estimatedFreight, 2) . 
                                          ' (Handling: ₱' . number_format($handlingFee, 2) . ')',
                     ]);
@@ -3707,7 +3642,7 @@ class LogisticController extends Controller
             \App\Models\ActivityLog::create([
                 'user_id' => auth()->id(),
                 'action' => 'Area Consignment SI Created',
-                'description' => "Sales Invoice {$si->si_number} created from Area Consignment SO {$order->so_number}. Total: ₱" . number_format($totalAmount, 2),
+                'description' => "Sales Invoice {$si->si_number} created from Area Consignment SO {$order->so_number}. Total: " . number_format($totalAmount, 2),
                 'affected_model' => 'SalesOrder',
                 'affected_model_id' => $order->id,
                 'ip_address' => $request->ip(),
@@ -4594,21 +4529,21 @@ $transfer->save();
                             $tItem->quantity = floatval($itemData['quantity']);
                         }
 
-                        if (array_key_exists('picked_qty', $itemData)) {
-                            $picked = ($itemData['picked_qty'] !== '' && $itemData['picked_qty'] !== null) ? floatval($itemData['picked_qty']) : null;
-                            if ($picked !== null && $picked > $tItem->quantity) {
-                                $picked = $tItem->quantity;
-                            }
-                            $tItem->picked_qty = $picked;
-                        }
+                       if (array_key_exists('picked_qty', $itemData)) {
+    $picked = ($itemData['picked_qty'] !== '' && $itemData['picked_qty'] !== null)
+        ? max(0, floatval($itemData['picked_qty']))
+        : null;
 
-                        if (array_key_exists('packed_qty', $itemData)) {
-                            $packed = ($itemData['packed_qty'] !== '' && $itemData['packed_qty'] !== null) ? floatval($itemData['packed_qty']) : null;
-                            if ($packed !== null && $packed > $tItem->quantity) {
-                                $packed = $tItem->quantity;
-                            }
-                            $tItem->packed_qty = $packed;
-                        }
+    $tItem->picked_qty = $picked;
+}
+
+if (array_key_exists('packed_qty', $itemData)) {
+    $packed = ($itemData['packed_qty'] !== '' && $itemData['packed_qty'] !== null)
+        ? max(0, floatval($itemData['packed_qty']))
+        : null;
+
+    $tItem->packed_qty = $packed;
+}
 
                         if (isset($itemData['status']) && !empty($itemData['status'])) {
                             $tItem->status = $itemData['status'];

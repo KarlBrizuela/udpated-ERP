@@ -1625,9 +1625,15 @@ $totalPcs = $tt->items->sum(function($item) use ($getItemQty) {
                             
                               		$displayQty = (float)($tItem->picked_qty ?? 0);
                                    
-                                    $effectiveQty = ($tItem->packed_qty !== null && (float)$tItem->packed_qty > 0) ? min((float)$tItem->packed_qty, $displayQty) : ($tItem->status === 'Packed' ? $displayQty : 0);
+                                                                $effectiveQty = $tItem->packed_qty !== null
+    ? (float) $tItem->packed_qty
+    : 0;
                                     $itemSubtotal = $unitPrice * ($effectiveQty > 0 ? $effectiveQty : $displayQty);
                                     $isItemPacked = ($tItem->status === 'Packed' || ($tItem->packed_qty !== null && (float)$tItem->packed_qty > 0 && $displayQty > 0 && $tItem->packed_qty >= $displayQty));
+                              
+
+                              
+                              
                                 @endphp
                                 <tr id="ts_row_{{ $tt->id }}_{{ $idx }}" class="ts-item-row" data-transfer-id="{{ $tt->id }}" data-index="{{ $idx }}" data-barcodes="{{ $barcodesJson }}" data-title="{{ e($itemName) }}" style="background: {{ $isItemPacked ? '#d4edda' : ($tItem->status === 'In Progress' ? '#fff3cd' : '#f8d7da') }};">
                                     <td>{{ $idx + 1 }}</td>
@@ -1655,7 +1661,7 @@ $totalPcs = $tt->items->sum(function($item) use ($getItemQty) {
                                         <span id="ts_subtotal_{{ $tt->id }}_{{ $idx }}">{{ $tSym }}{{ number_format($itemSubtotal, 2) }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <input type="number" name="items[{{ $idx }}][packed_qty]" id="ts_packed_qty_{{ $tt->id }}_{{ $idx }}" min="0" max="{{ $displayQty }}" value="{{ $effectiveQty > 0 || $displayQty <= 0 ? $effectiveQty : '' }}" placeholder="0" oninput="onTSPackedQtyInput({{ $tt->id }}, {{ $idx }}, {{ $unitPrice }})" onchange="updateTeamStockPackingProgress({{ $tt->id }})" style="width: 70px; padding: 2px 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: 600;">
+                                        <input type="number" name="items[{{ $idx }}][packed_qty]" id="ts_packed_qty_{{ $tt->id }}_{{ $idx }}" min="0" max="{{ $displayQty }}" value="{{ $effectiveQty }}" placeholder="0" oninput="onTSPackedQtyInput({{ $tt->id }}, {{ $idx }}, {{ $unitPrice }})" onchange="updateTeamStockPackingProgress({{ $tt->id }})" style="width: 70px; padding: 2px 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: 600;">
                                     </td>
                                     <td class="text-center">
                                         <select name="items[{{ $idx }}][status]" id="ts_packed_status_{{ $tt->id }}_{{ $idx }}" class="ts-status-select" onchange="onTSStatusSelectChange({{ $tt->id }}, {{ $idx }})" style="padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; font-weight: 600;">
@@ -1826,7 +1832,7 @@ $totalPcs = $tt->items->sum(function($item) use ($getItemQty) {
                                     <tr>
                                         <th style="width: 40px;">#</th>
                                         <th>PRODUCT</th>
-                                        <th style="width: 110px;" class="text-center">QTY TO PACK</th>
+                                      
                                         <th style="width: 110px;" class="text-center">PICKED QTY</th>
                                         <th style="width: 110px;" class="text-center">PACKED QTY</th>
                                         <th style="width: 130px;" class="text-center">STATUS</th>
@@ -1855,11 +1861,22 @@ $totalPcs = $tt->items->sum(function($item) use ($getItemQty) {
                                             </div>
                                         </td>
                                         <td class="text-center">
-                                            <input type="number" step="any" min="0" name="items[{{ $tItem->id }}][quantity]" value="{{ $tItem->quantity }}" style="width: 70px; padding: 2px 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: 600;" required>
-                                        </td>
-                                        <td class="text-center">
-                                            <input type="number" step="any" min="0" name="items[{{ $tItem->id }}][picked_qty]" value="{{ $tItem->picked_qty }}" style="width: 70px; padding: 2px 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px;" placeholder="0">
-                                        </td>
+                                          <!--  <input type="number" step="any" min="0" name="items[{{ $tItem->id }}][quantity]" value="{{ $tItem->quantity }}" style="width: 70px; padding: 2px 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: 600;" required>-->
+                                       
+                                   
+<input type="hidden"
+       name="items[{{ $tItem->id }}][quantity]"
+       value="{{ $tItem->quantity }}">
+
+
+<input type="number"
+       step="any"
+       min="0"
+       name="items[{{ $tItem->id }}][picked_qty]"
+       value="{{ $tItem->picked_qty !== null ? $tItem->picked_qty : 0 }}">
+</td>
+                                      
+                                        
                                         <td class="text-center">
                                             <input type="number" step="any" min="0" name="items[{{ $tItem->id }}][packed_qty]" value="{{ $tItem->packed_qty }}" style="width: 70px; padding: 2px 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: 600; color: #28a745;" placeholder="0">
                                         </td>
@@ -3649,7 +3666,7 @@ $totalPcs = $tt->items->sum(function($item) use ($getItemQty) {
             `;
 
             const cancelBtn = document.createElement('button');
-            cancelBtn.textContent = '✕ Cancel';
+            cancelBtn.textContent = ' Cancel';
             cancelBtn.style.cssText = `
                 background: #6c757d;
                 color: white;
