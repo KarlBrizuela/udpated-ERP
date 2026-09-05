@@ -28,6 +28,10 @@
                     </div>
 
                     <div class="card-body">
+                        @php
+                            $fqCurr = $quotation->currency ?? ($quotation->salesOrder->currency ?? 'PHP');
+                            $fqSym = ($fqCurr === 'USD' ? '$' : '₱');
+                        @endphp
                         @if(session('success'))
                             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
@@ -249,8 +253,6 @@
                         <!-- Logistics Response (if approved or linked) -->
                         @if(in_array($quotation->workflow_status, ['approved', 'linked_to_so']) || $quotation->status === 'approved')
                             @php
-                                $fqCurr = $quotation->currency ?? ($quotation->salesOrder->currency ?? 'PHP');
-                                $fqSym = ($fqCurr === 'USD' ? '$' : '₱');
                                 $displayTotal = $quotation->total_amount ?? ($quotation->estimated_freight + ($quotation->handling_fee ?? 0));
                             @endphp
                             <div style="background: #f0fdf4; padding: 1rem; border-radius: 6px; border: 2px solid #10b981; margin-bottom: 1.5rem;">
