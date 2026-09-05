@@ -6133,88 +6133,163 @@ public function checkVoucher()
         $totalExpenseSum = 0.00;
 
         if ($selectedReport === 'Balance Sheet') {
-            $getDynamicAccountLabel = function($code, $fallbackName) {
-                $acc = \App\Models\ChartOfAccount::where('code', $code)
-                    ->orWhere('name', 'like', '%' . explode(' ', $fallbackName)[0] . '%')
-                    ->first();
-                if ($acc) {
-                    return $acc->code . ' - ' . $acc->name;
+            $categorizeAssetGroup = function($groupName) {
+                $norm = strtolower(str_replace(['-', '_'], ' ', $groupName));
+                if (str_contains($norm, 'non') && str_contains($norm, 'other')) {
+                    return 'other_non_current_assets';
+                } elseif (str_contains($norm, 'non')) {
+                    return 'non_current_assets';
+                } elseif (str_contains($norm, 'other')) {
+                    return 'other_current_assets';
+                } else {
+                    return 'current_assets';
                 }
-                return $code . ' - ' . $fallbackName;
             };
+
+            $assetSections = [
+                'current_assets' => ['title' => 'Current Assets', 'items' => [], 'subtotal' => 0.0],
+                'other_current_assets' => ['title' => 'Other Current Assets', 'items' => [], 'subtotal' => 0.0],
+                'non_current_assets' => ['title' => 'Non-Current Assets', 'items' => [], 'subtotal' => 0.0],
+                'other_non_current_assets' => ['title' => 'Other Non-Current Assets', 'items' => [], 'subtotal' => 0.0],
+            ];
 
             // Dynamically load Account Groups for Asset
             $assetGroups = \App\Models\AccountGroup::where('type', 'Asset')->with(['accounts' => function($q) {
-                $q->where('is_active', true);
+                $q->where('is_active', true)->orderBy('code');
             }])->get();
 
-            $currentAssetsList = [];
             foreach ($assetGroups as $grp) {
+                $secKey = $categorizeAssetGroup($grp->name);
+                $grpTotal = 0;
+                $subAccs = [];
+                foreach ($grp->accounts as $acc) {
+                    $bal = $this->calculateAccountLiveBalance($acc, 'Asset');
+                    $grpTotal += $bal;
+                    $subAccs[] = [
+                        'code' => $acc->code,
+                        'name' => $acc->name,
+                        'amount' => $bal,
+                    ];
+                }
                 if ($grp->accounts->count() > 0) {
-                    $grpTotal = 0;
-                    $subAccs = [];
-                    foreach ($grp->accounts as $acc) {
-                        $bal = $this->calculateAccountLiveBalance($acc, 'Asset');
-                        $grpTotal += $bal;
-                        $subAccs[] = [
-                            'code' => $acc->code,
-                            'name' => $acc->name,
-                            'amount' => $bal,
-                        ];
-                    }
-                    $currentAssetsList[] = [
+                    $assetSections[$secKey]['items'][] = [
                         'is_group' => true,
                         'group_name' => $grp->name,
                         'amount' => $grpTotal,
                         'accounts' => $subAccs,
                     ];
+                    $assetSections[$secKey]['subtotal'] += $grpTotal;
                 }
             }
 
-            if (empty($currentAssetsList)) {
-                $cashAcc = \App\Models\ChartOfAccount::where('name', 'like', '%Cash on Hand%')->first();
-                $cashCode = $cashAcc ? $cashAcc->code : '1010';
-                $currentAssetsList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel($cashCode, 'Cash & Bank Balances'), 'amount' => $totalCash];
-            }
-            $currentAssetsList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel('1200', 'Accounts Receivable'), 'amount' => $liveAr];
-            $currentAssetsList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel('1300', 'Production Master Inventory'), 'amount' => $liveBookInventory];
-            $currentAssetsList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel('1040', 'Short-term Time Deposits'), 'amount' => \App\Models\Investment::where('type', 'Time Deposits')->sum('current_value')];
+            // Dynamically include any unassigned active Asset accounts
+            $unassignedAssets = \App\Models\ChartOfAccount::where('type', 'Asset')
+                ->whereNull('account_group_id')
+                ->where('is_active', true)
+                ->orderBy('code')
+                ->get();
 
-            // Liabilities Groups & Standalone
+            foreach ($unassignedAssets as $acc) {
+                $bal = $this->calculateAccountLiveBalance($acc, 'Asset');
+                $cat = strtolower($acc->category ?? '');
+                $secKey = 'current_assets';
+                if (str_contains($cat, 'non') && str_contains($cat, 'other')) {
+                    $secKey = 'other_non_current_assets';
+                } elseif (str_contains($cat, 'non') || str_contains($cat, 'fixed')) {
+                    $secKey = 'non_current_assets';
+                } elseif (str_contains($cat, 'other')) {
+                    $secKey = 'other_current_assets';
+                }
+                $assetSections[$secKey]['items'][] = [
+                    'is_group' => false,
+                    'account' => $acc->code . ' - ' . $acc->name,
+                    'amount' => $bal,
+                ];
+                $assetSections[$secKey]['subtotal'] += $bal;
+            }
+
+            $totalAssetsSum = array_sum(array_column($assetSections, 'subtotal'));
+
+            // Liabilities Dynamic Categorization (Current, Other Current, Non-Current, Other Non-Current)
+            $categorizeLiabilityGroup = function($groupName) {
+                $norm = strtolower(str_replace(['-', '_'], ' ', $groupName));
+                if (str_contains($norm, 'non') && str_contains($norm, 'other')) {
+                    return 'other_non_current_liabilities';
+                } elseif (str_contains($norm, 'non')) {
+                    return 'non_current_liabilities';
+                } elseif (str_contains($norm, 'other')) {
+                    return 'other_current_liabilities';
+                } else {
+                    return 'current_liabilities';
+                }
+            };
+
+            $liabilitySections = [
+                'current_liabilities' => ['title' => 'Current Liabilities', 'items' => [], 'subtotal' => 0.0],
+                'other_current_liabilities' => ['title' => 'Other Current Liabilities', 'items' => [], 'subtotal' => 0.0],
+                'non_current_liabilities' => ['title' => 'Non-Current Liabilities', 'items' => [], 'subtotal' => 0.0],
+                'other_non_current_liabilities' => ['title' => 'Other Non-Current Liabilities', 'items' => [], 'subtotal' => 0.0],
+            ];
+
             $liabGroups = \App\Models\AccountGroup::where('type', 'Liability')->with(['accounts' => function($q) {
-                $q->where('is_active', true);
+                $q->where('is_active', true)->orderBy('code');
             }])->get();
 
-            $liabilitiesList = [];
             foreach ($liabGroups as $grp) {
+                $secKey = $categorizeLiabilityGroup($grp->name);
+                $grpTotal = 0;
+                $subAccs = [];
+                foreach ($grp->accounts as $acc) {
+                    $bal = $this->calculateAccountLiveBalance($acc, 'Liability');
+                    $grpTotal += $bal;
+                    $subAccs[] = [
+                        'code' => $acc->code,
+                        'name' => $acc->name,
+                        'amount' => $bal,
+                    ];
+                }
                 if ($grp->accounts->count() > 0) {
-                    $grpTotal = 0;
-                    $subAccs = [];
-                    foreach ($grp->accounts as $acc) {
-                        $bal = $this->calculateAccountLiveBalance($acc, 'Liability');
-                        $grpTotal += $bal;
-                        $subAccs[] = [
-                            'code' => $acc->code,
-                            'name' => $acc->name,
-                            'amount' => $bal,
-                        ];
-                    }
-                    $liabilitiesList[] = [
+                    $liabilitySections[$secKey]['items'][] = [
                         'is_group' => true,
                         'group_name' => $grp->name,
                         'amount' => $grpTotal,
                         'accounts' => $subAccs,
                     ];
+                    $liabilitySections[$secKey]['subtotal'] += $grpTotal;
                 }
             }
 
-            $liabilitiesList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel('2000', 'Accounts Payable (Suppliers)'), 'amount' => $liveAp];
-            $liabilitiesList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel('2020', 'Accrued Operating Expenses'), 'amount' => $liveExpenses];
-            $liabilitiesList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel('2100', 'Withholding Tax Payable'), 'amount' => $liveWht];
+            // Unassigned active liability accounts
+            $unassignedLiab = \App\Models\ChartOfAccount::where('type', 'Liability')
+                ->whereNull('account_group_id')
+                ->where('is_active', true)
+                ->orderBy('code')
+                ->get();
 
-            // Equity Groups & Standalone
+            foreach ($unassignedLiab as $acc) {
+                $bal = $this->calculateAccountLiveBalance($acc, 'Liability');
+                $cat = strtolower($acc->category ?? '');
+                $secKey = 'current_liabilities';
+                if (str_contains($cat, 'non') && str_contains($cat, 'other')) {
+                    $secKey = 'other_non_current_liabilities';
+                } elseif (str_contains($cat, 'non') || str_contains($cat, 'long')) {
+                    $secKey = 'non_current_liabilities';
+                } elseif (str_contains($cat, 'other')) {
+                    $secKey = 'other_current_liabilities';
+                }
+                $liabilitySections[$secKey]['items'][] = [
+                    'is_group' => false,
+                    'account' => $acc->code . ' - ' . $acc->name,
+                    'amount' => $bal,
+                ];
+                $liabilitySections[$secKey]['subtotal'] += $bal;
+            }
+
+            $totalLiabilitiesSum = array_sum(array_column($liabilitySections, 'subtotal'));
+
+            // Equity Groups & Accounts
             $equityGroups = \App\Models\AccountGroup::where('type', 'Equity')->with(['accounts' => function($q) {
-                $q->where('is_active', true);
+                $q->where('is_active', true)->orderBy('code');
             }])->get();
 
             $equityList = [];
@@ -6240,16 +6315,73 @@ public function checkVoucher()
                 }
             }
 
-            $liabilitiesTotal = $liveAp + $liveExpenses + $liveWht;
-            $equityList[] = ['is_group' => false, 'account' => $getDynamicAccountLabel('3000', 'Capital & Retained Earnings'), 'amount' => max(0, $totalAssets - $liabilitiesTotal)];
+            $unassignedEquity = \App\Models\ChartOfAccount::where('type', 'Equity')
+                ->whereNull('account_group_id')
+                ->where('is_active', true)
+                ->orderBy('code')
+                ->get();
+
+            foreach ($unassignedEquity as $acc) {
+                $bal = $this->calculateAccountLiveBalance($acc, 'Equity');
+                $equityList[] = [
+                    'is_group' => false,
+                    'account' => $acc->code . ' - ' . $acc->name,
+                    'amount' => $bal,
+                ];
+            }
+
+            // Dynamic balancing equity (Retained Earnings / Fund Balance) if needed to balance Assets = Liabilities + Equity
+            $currentEquitySum = collect($equityList)->sum('amount');
+            $retainedBalancing = max(0, $totalAssetsSum - ($totalLiabilitiesSum + $currentEquitySum));
+            if ($retainedBalancing > 0) {
+                $retainedAcc = \App\Models\ChartOfAccount::where('type', 'Equity')
+                    ->where(function($q) {
+                        $q->where('name', 'like', '%Retained Earnings%')
+                          ->orWhere('name', 'like', '%Fund Balance%')
+                          ->orWhere('name', 'like', '%Capital%');
+                    })->first();
+                $retainedLabel = $retainedAcc ? ($retainedAcc->code . ' - ' . $retainedAcc->name) : 'Retained Earnings / Fund Balance';
+
+                $updated = false;
+                foreach ($equityList as &$eqItem) {
+                    if (!empty($eqItem['account']) && $retainedAcc && str_contains($eqItem['account'], $retainedAcc->code)) {
+                        if ($eqItem['amount'] == 0) {
+                            $eqItem['amount'] = $retainedBalancing;
+                            $updated = true;
+                            break;
+                        }
+                    }
+                }
+                unset($eqItem);
+
+                if (!$updated) {
+                    $equityList[] = [
+                        'is_group' => false,
+                        'account' => $retainedLabel,
+                        'amount' => $retainedBalancing,
+                    ];
+                }
+            }
+
+            $allLiabItems = array_merge(
+                $liabilitySections['current_liabilities']['items'],
+                $liabilitySections['other_current_liabilities']['items'],
+                $liabilitySections['non_current_liabilities']['items'],
+                $liabilitySections['other_non_current_liabilities']['items']
+            );
 
             $reportData = [
-                'current_assets' => $currentAssetsList,
-                'non_current_assets' => [
-                    ['is_group' => false, 'account' => $getDynamicAccountLabel('1600', 'Production Fixed Machinery'), 'amount' => $liveFixedAssets],
-                    ['is_group' => false, 'account' => $getDynamicAccountLabel('1700', 'Long-term Investments & Bonds'), 'amount' => \App\Models\Investment::whereIn('type', ['Bonds', 'Stocks', 'Mutual Funds'])->sum('current_value')],
-                ],
-                'liabilities' => $liabilitiesList,
+                'asset_sections' => $assetSections,
+                'current_assets' => $assetSections['current_assets']['items'],
+                'other_current_assets' => $assetSections['other_current_assets']['items'],
+                'non_current_assets' => $assetSections['non_current_assets']['items'],
+                'other_non_current_assets' => $assetSections['other_non_current_assets']['items'],
+                'liability_sections' => $liabilitySections,
+                'current_liabilities' => $liabilitySections['current_liabilities']['items'],
+                'other_current_liabilities' => $liabilitySections['other_current_liabilities']['items'],
+                'non_current_liabilities' => $liabilitySections['non_current_liabilities']['items'],
+                'other_non_current_liabilities' => $liabilitySections['other_non_current_liabilities']['items'],
+                'liabilities' => $allLiabItems,
                 'equity' => $equityList,
             ];
         } elseif ($selectedReport === 'Income Statement') {
