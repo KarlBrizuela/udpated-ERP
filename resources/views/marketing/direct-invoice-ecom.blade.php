@@ -194,6 +194,13 @@
                                 <input type="text" class="form-control" name="platform_order_id" placeholder="e.g., LZD-123456789" value="{{ old('platform_order_id') }}">
                             </div>
                             <div class="form-group">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="mb-0">SI Number:</label>
+                                    <span class="badge bg-light text-muted" style="font-size: 0.7rem; font-weight: 500;">Auto-incremented</span>
+                                </div>
+                                <input type="text" class="form-control fw-bold text-danger" name="si_number" id="siNumber" value="{{ old('si_number', $nextSiNumber ?? '') }}" placeholder="e.g. 00123" style="border: 2px solid #eef0f2; border-radius: 8px; font-weight: 700; color: #dc3545; font-size: 1rem; padding-left: 12px;">
+                            </div>
+                            <div class="form-group">
                                 <label>Terms:</label>
                                 <input type="text" class="form-control" name="terms"  value="COD/Due on Receipt">
                             </div>
@@ -346,6 +353,7 @@
                         <thead style="background: #f8f9fa;">
                             <tr>
                                 <th>Invoice #</th>
+                                <th>SI #</th>
                                 <th>Customer</th>
                                 <th>Platform</th>
                                 <th>Order ID</th>
@@ -360,8 +368,20 @@
                         </thead>
                         <tbody>
                             @forelse($invoices as $inv)
+                            @php
+                                $siNumber = $inv->si_number ?: (\App\Models\SalesInvoice::where('so_id', $inv->id)->value('si_number') ?? null);
+                            @endphp
                             <tr>
                                 <td class="fw-bold">{{ $inv->so_number }}</td>
+                                <td>
+                                    @if($siNumber)
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 font-monospace" style="font-size: 0.8rem; font-weight: 700;">
+                                            <i class="las la-file-invoice me-1"></i>{{ $siNumber }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted small">—</span>
+                                    @endif
+                                </td>
                                 <td>{{ $inv->customer->customer_name ?? 'N/A' }}</td>
                                 <td>
                                     <span class="platform-badge platform-{{ $inv->ecom_platform }}">
@@ -421,7 +441,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="11" class="text-center py-4 text-muted">No E-com invoices found.</td>
+                                <td colspan="12" class="text-center py-4 text-muted">No E-com invoices found.</td>
                             </tr>
                             @endforelse
                         </tbody>
@@ -472,6 +492,42 @@
                 const customerSelect = document.getElementById('customerSelect');
                 const billingAddress = document.getElementById('billingAddress');
 
+                const platformNextSi = @json($platformNextSi ?? []);
+
+                function calculateNextSiNumber(currentSi) {
+                    if (!currentSi || !currentSi.trim()) return '00001';
+                    const trimmed = currentSi.trim();
+                    const match = trimmed.match(/^(.*?)(\d+)$/);
+                    if (match) {
+                        const prefix = match[1];
+                        const digits = match[2];
+                        const nextNum = parseInt(digits, 10) + 1;
+                        const nextDigits = String(nextNum).padStart(digits.length, '0');
+                        return prefix + nextDigits;
+                    }
+                    return trimmed + '1';
+                }
+
+                function updateSiNumberForPlatform(platform) {
+                    const siInput = document.getElementById('siNumber');
+                    if (!siInput) return;
+                    
+                    if (platformNextSi && platformNextSi[platform]) {
+                        siInput.value = platformNextSi[platform];
+                    }
+
+                    // Also fetch live from server to ensure fresh sequence
+                    fetch(`/marketing/pos/next-si-number?platform=${encodeURIComponent(platform)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success && data.next_si_number && getSelectedPlatform() === platform) {
+                                siInput.value = data.next_si_number;
+                                platformNextSi[platform] = data.next_si_number;
+                            }
+                        })
+                        .catch(() => {});
+                }
+
                 // Platform selection
                 document.querySelectorAll('.platform-option').forEach(opt => {
                     const radio = opt.querySelector('input[type="radio"]');
@@ -482,6 +538,7 @@
                         this.classList.add('active');
                         radio.checked = true;
                         updateProductStocks();
+                        updateSiNumberForPlatform(radio.value);
                     });
                 });
 

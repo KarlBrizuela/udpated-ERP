@@ -4,23 +4,46 @@
             <div class="col-12">
                 <div class="card" style="border-radius: 8px; box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);">
                     <!-- Header -->
-                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="mb-0"><i class="bi bi-file-earmark me-2"></i>Freight Quotation: {{ $quotation->quote_number }}</h5>
-                        <span class="badge bg-light text-dark">
-                            @php
-                                $statusClass = [
-                                    'draft' => 'primary',
-                                    'pending_logistics' => 'warning',
-                                    'approved' => 'success',
-                                    'linked_to_so' => 'info',
-                                ];
-                            @endphp
-                            {{ ucfirst(str_replace('_', ' ', $quotation->workflow_status)) }}
-                        </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-light text-dark fw-bold shadow-sm" id="btnToggleEdit" onclick="toggleEditMode(true)">
+                                <i class="bi bi-pencil-square me-1 text-primary"></i>Edit Quotation & Freight
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-light text-white d-none" id="btnCancelEditHeader" onclick="toggleEditMode(false)">
+                                <i class="bi bi-x-circle me-1"></i>Cancel Edit
+                            </button>
+                            <span class="badge bg-light text-dark">
+                                @php
+                                    $statusClass = [
+                                        'draft' => 'primary',
+                                        'pending_logistics' => 'warning',
+                                        'approved' => 'success',
+                                        'linked_to_so' => 'info',
+                                    ];
+                                @endphp
+                                {{ ucfirst(str_replace('_', ' ', $quotation->workflow_status)) }}
+                            </span>
+                        </div>
                     </div>
 
                     <div class="card-body">
-                        <!-- Status Timeline -->
+                        @if(session('success'))
+                            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @endif
+                        @if(session('error'))
+                            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                                <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @endif
+
+                        <!-- View Mode Container -->
+                        <div id="freightViewMode" class="{{ request('edit') ? 'd-none' : '' }}">
+                            <!-- Status Timeline -->
                         <div class="mb-4">
                             <div class="row text-center">
                                 <div class="col-3">
@@ -432,15 +455,82 @@
                             <hr>
                         @endif
 
+                        @php
+                            $popPath = $quotation->proof_of_payment ?: ($quotation->salesOrder?->proof_of_payment ?? null);
+                        @endphp
+                        @if(in_array($quotation->workflow_status, ['approved', 'linked_to_so']) || $quotation->status === 'approved')
+                            <div class="proof-of-payment-box border rounded p-2 px-3 mb-3 bg-white shadow-sm" style="height: auto !important; min-height: 0 !important; max-height: max-content !important;">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <!-- Title & Info -->
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light text-primary border" style="width: 32px; height: 32px;">
+                                            <i class="bi bi-receipt"></i>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <strong style="font-size: 0.85rem;">Proof of Payment</strong>
+                                                <span class="badge {{ $popPath ? 'bg-success text-white' : 'bg-light text-muted border' }}" style="font-size: 0.7rem;">
+                                                    {{ $popPath ? 'Attached' : 'Optional' }}
+                                                </span>
+                                            </div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">
+                                                @if($popPath)
+                                                    <span class="text-dark fw-medium">{{ basename($popPath) }}</span>
+                                                @else
+                                                    Attach deposit slip, bank screenshot, or receipt
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Actions / Upload form -->
+                                    <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                                        @if($popPath)
+                                            <a href="{{ asset('storage/' . $popPath) }}" target="_blank" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.78rem;">
+                                                <i class="bi bi-eye me-1"></i>View
+                                            </a>
+                                            <a href="{{ asset('storage/' . $popPath) }}" download class="btn btn-sm btn-outline-secondary py-1 px-2" style="font-size: 0.78rem;">
+                                                <i class="bi bi-download me-1"></i>Download
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size: 0.78rem;" onclick="document.getElementById('compactPopForm').classList.toggle('d-none')">
+                                                <i class="bi bi-arrow-repeat me-1"></i>Replace
+                                            </button>
+                                        @endif
+
+                                        <form id="compactPopForm" action="{{ route('marketing.freight-quotations.upload-proof-of-payment', $quotation->id) }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-1 m-0 {{ $popPath ? 'd-none' : '' }}">
+                                            @csrf
+                                            <div class="input-group input-group-sm" style="max-width: 320px;">
+                                                <input type="file" name="proof_of_payment" class="form-control form-control-sm @error('proof_of_payment') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png" required style="font-size: 0.75rem;">
+                                                <button type="submit" class="btn btn-sm btn-danger px-2" style="font-size: 0.78rem;">
+                                                    <i class="bi bi-cloud-upload me-1"></i>Upload
+                                                </button>
+                                            </div>
+                                            @if($popPath)
+                                                <button type="button" class="btn btn-sm btn-light border py-1 px-2" style="font-size: 0.75rem;" onclick="document.getElementById('compactPopForm').classList.add('d-none')">Cancel</button>
+                                            @endif
+                                        </form>
+                                    </div>
+                                </div>
+                                @error('proof_of_payment')
+                                    <div class="text-danger small mt-1" style="font-size: 0.75rem;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        @endif
+
                         <!-- Action Buttons -->
                         @php
                             $isFordSource = !empty($isFord) || $quotation->source === 'ford' || (isset($quotation->salesOrder) && ($quotation->salesOrder->type === 'foreign' || str_contains($quotation->salesOrder->so_number ?? '', 'FORD')));
                             $backRoute = $isFordSource ? route($indexRoute ?? 'production.ford.freight-quotation.index') : route('marketing.freight-quotations.list');
                         @endphp
                         <div class="d-flex gap-2 justify-content-between flex-wrap" style="padding-top: 1.5rem;">
-                            <a href="{{ $backRoute }}" class="btn btn-light border">
-                                <i class="bi bi-arrow-left me-1"></i>Back
-                            </a>
+                            <div class="d-flex gap-2">
+                                <a href="{{ $backRoute }}" class="btn btn-light border">
+                                    <i class="bi bi-arrow-left me-1"></i>Back
+                                </a>
+                                <button type="button" class="btn btn-outline-primary" onclick="toggleEditMode(true)">
+                                    <i class="bi bi-pencil-square me-1"></i>Edit Freight & Quotation
+                                </button>
+                            </div>
 
                             <div>
                                 @if(in_array($quotation->workflow_status, ['approved', 'linked_to_so']))
@@ -450,7 +540,7 @@
                                             @if($isFordSource)
                                                 <input type="hidden" name="source" value="ford">
                                             @endif
-                                            <button type="submit" class="btn btn-success btn-lg">
+                                            <button type="submit" class="btn btn-success">
                                                 <i class="bi bi-plus-circle me-1"></i>Create Sales Order
                                             </button>
                                         </form>
@@ -461,7 +551,7 @@
                                                 @if($isFordSource)
                                                     <input type="hidden" name="source" value="ford">
                                                 @endif
-                                                <button type="submit" class="btn btn-success btn-lg">
+                                                <button type="submit" class="btn btn-success">
                                                     <i class="bi bi-arrow-right-circle me-1"></i>Proceed Sales Order (SO #{{ $quotation->salesOrder->so_number }})
                                                 </button>
                                             </form>
@@ -471,7 +561,7 @@
                                                     ? (Route::has('production.ford.sales-order.review') && $quotation->sales_order_id ? route('production.ford.sales-order.review', $quotation->sales_order_id) : (Route::has('production.ford.sales-order') ? route('production.ford.sales-order') : route('marketing.sales-orders.detail', $quotation->sales_order_id)))
                                                     : route('marketing.sales-orders.detail', $quotation->sales_order_id);
                                             @endphp
-                                            <a href="{{ $targetSoRoute }}" class="btn btn-info btn-lg">
+                                            <a href="{{ $targetSoRoute }}" class="btn btn-info">
                                                 <i class="bi bi-box-arrow-up-right me-1"></i>View Sales Order (SO #{{ $quotation->salesOrder->so_number ?? '' }})
                                             </a>
                                         @endif
@@ -484,11 +574,379 @@
                                 @endif
                             </div>
                         </div>
+                    </div> <!-- End #freightViewMode -->
+
+                        <!-- Full Unified On-Page Edit Form ("Buo") -->
+                        @php
+                            $updateAction = $isFordSource
+                                ? route('production.ford.freight-quotation.update', $quotation->id)
+                                : route('marketing.freight-quotations.update', $quotation->id);
+                            $cargoItemsArray = is_string($quotation->cargo_items) ? json_decode($quotation->cargo_items, true) : ($quotation->cargo_items ?? []);
+                            if (!is_array($cargoItemsArray)) { $cargoItemsArray = []; }
+                        @endphp
+
+                        <div id="freightEditMode" class="{{ request('edit') ? '' : 'd-none' }}">
+                            <form action="{{ $updateAction }}" method="POST" enctype="multipart/form-data" id="editFreightFullForm">
+                                @csrf
+                                @method('PUT')
+
+                                <!-- Form Top Action Bar -->
+                                <div class="p-3 mb-4 rounded border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h5 class="mb-0 text-dark fw-bold">
+                                            <i class="bi bi-pencil-square text-primary me-2"></i>Edit Full Quotation & Freight Details
+                                        </h5>
+                                        <small class="text-muted">You can edit quotation settings, shipment addresses, cargo packages, logistics charges, and sales order items below.</small>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-secondary" onclick="toggleEditMode(false)">
+                                            <i class="bi bi-x-circle me-1"></i>Cancel
+                                        </button>
+                                        <button type="submit" class="btn btn-danger px-3 fw-bold">
+                                            <i class="bi bi-check-circle me-1"></i>Save Changes
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 1. Quotation & Shipment Information -->
+                                <div class="border rounded mb-4 shadow-sm bg-white" style="height: auto !important; min-height: 0 !important;">
+                                    <div class="bg-light border-bottom p-2 px-3">
+                                        <strong class="text-uppercase text-secondary" style="font-size: 0.85rem;">
+                                            <i class="bi bi-geo-alt-fill text-danger me-1"></i>1. Quotation & Shipment Information
+                                        </strong>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="row g-3 mb-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">Service Mode</label>
+                                                <select name="service_mode" class="form-select form-select-sm">
+                                                    @foreach(['Door to Door', 'Pier to Pier', 'Door to Pier', 'Pier to Door', 'Air Freight', 'Sea Freight'] as $sm)
+                                                        <option value="{{ $sm }}" {{ ($quotation->service_mode ?? '') === $sm ? 'selected' : '' }}>{{ $sm }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">Forwarder / Carrier</label>
+                                                <input type="text" name="forwarder" class="form-control form-control-sm" value="{{ $quotation->forwarder ?? $quotation->freight_mode ?? '' }}" placeholder="e.g. Fedex, DHL, 2GO">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">Freight Option</label>
+                                                <select name="freight_option" class="form-select form-select-sm" id="edit_freight_option" onchange="calculateFreightTotal()">
+                                                    <option value="freight_collect" {{ ($quotation->freight_option ?? '') === 'freight_collect' ? 'selected' : '' }}>Freight Collect (+Service Fee)</option>
+                                                    <option value="freight_billing" {{ ($quotation->freight_option ?? '') === 'freight_billing' ? 'selected' : '' }}>Freight Billing</option>
+                                                    <option value="bill_client" {{ ($quotation->freight_option ?? '') === 'bill_client' ? 'selected' : '' }}>Bill Client</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">Currency</label>
+                                                <select name="currency" class="form-select form-select-sm" id="edit_currency" onchange="calculateFreightTotal()">
+                                                    <option value="PHP" {{ ($quotation->currency ?? 'PHP') === 'PHP' ? 'selected' : '' }}>PHP (₱)</option>
+                                                    <option value="USD" {{ ($quotation->currency ?? '') === 'USD' ? 'selected' : '' }}>USD ($)</option>
+                                                    <option value="EUR" {{ ($quotation->currency ?? '') === 'EUR' ? 'selected' : '' }}>EUR (€)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Customer Representative</label>
+                                                <input type="text" name="customer_representative" class="form-control form-control-sm" value="{{ $quotation->customer_representative ?? '' }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Terms</label>
+                                                <input type="text" name="terms" class="form-control form-control-sm" value="{{ $quotation->terms ?? '' }}" placeholder="e.g. 30 Days, COD">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Quote Date</label>
+                                                <input type="date" name="quote_date" class="form-control form-control-sm" value="{{ $quotation->quote_date ? \Carbon\Carbon::parse($quotation->quote_date)->format('Y-m-d') : date('Y-m-d') }}">
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-3">
+                                            <!-- Origin -->
+                                            <div class="col-md-6 border-end pe-md-3">
+                                                <h6 class="small fw-bold text-primary mb-2">📍 Origin (Pick-up)</h6>
+                                                <div class="mb-2">
+                                                    <label class="form-label small">Origin Contact</label>
+                                                    <input type="text" name="origin_contact" class="form-control form-control-sm" value="{{ $quotation->origin_contact ?? '' }}">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label small">Origin Province</label>
+                                                    <input type="text" name="origin_province" class="form-control form-control-sm" value="{{ $quotation->origin_province ?? '' }}">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label small">Origin Address</label>
+                                                    <textarea name="origin_address" rows="2" class="form-control form-control-sm">{{ $quotation->origin_address ?? '' }}</textarea>
+                                                </div>
+                                            </div>
+                                            <!-- Destination -->
+                                            <div class="col-md-6 ps-md-3">
+                                                <h6 class="small fw-bold text-success mb-2">📍 Destination (Delivery)</h6>
+                                                <div class="mb-2">
+                                                    <label class="form-label small">Destination Contact</label>
+                                                    <input type="text" name="destination_contact" class="form-control form-control-sm" value="{{ $quotation->destination_contact ?? '' }}">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label small">Destination Province</label>
+                                                    <input type="text" name="destination_province" class="form-control form-control-sm" value="{{ $quotation->destination_province ?? '' }}">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label small">Destination Address</label>
+                                                    <textarea name="destination_address" rows="2" class="form-control form-control-sm">{{ $quotation->destination_address ?? '' }}</textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Cargo Packages -->
+                                <div class="border rounded mb-4 shadow-sm bg-white" style="height: auto !important; min-height: 0 !important;">
+                                    <div class="bg-light border-bottom p-2 px-3 d-flex justify-content-between align-items-center">
+                                        <strong class="text-uppercase text-secondary" style="font-size: 0.85rem;">
+                                            <i class="bi bi-box-seam text-warning me-1"></i>2. Cargo Packages
+                                        </strong>
+                                        <button type="button" class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.8rem;" onclick="addCargoRow()">
+                                            <i class="bi bi-plus-circle me-1"></i>Add Package Row
+                                        </button>
+                                    </div>
+                                    <div class="p-2">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered align-middle mb-0" id="cargoItemsTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="width: 120px;">Quantity</th>
+                                                        <th>Package Type</th>
+                                                        <th>Dimensions (L x W x H)</th>
+                                                        <th style="width: 60px;" class="text-center">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="cargoItemsTableBody">
+                                                    @forelse($cargoItemsArray as $item)
+                                                        <tr>
+                                                            <td>
+                                                                <input type="number" name="cargo_qty[]" class="form-control form-control-sm" min="1" value="{{ $item['qty'] ?? 1 }}" required>
+                                                            </td>
+                                                            <td>
+                                                                <input type="text" name="cargo_package_type[]" class="form-control form-control-sm" placeholder="e.g. Box, Crate" value="{{ $item['package_type'] ?? 'Box' }}">
+                                                            </td>
+                                                            <td>
+                                                                <input type="text" name="cargo_dimensions[]" class="form-control form-control-sm" placeholder="e.g. 30x20x15 cm" value="{{ $item['dimensions'] ?? '' }}">
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeCargoRow(this)">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td>
+                                                                <input type="number" name="cargo_qty[]" class="form-control form-control-sm" min="1" value="1" required>
+                                                            </td>
+                                                            <td>
+                                                                <input type="text" name="cargo_package_type[]" class="form-control form-control-sm" placeholder="e.g. Box, Crate" value="Box">
+                                                            </td>
+                                                            <td>
+                                                                <input type="text" name="cargo_dimensions[]" class="form-control form-control-sm" placeholder="e.g. 30x20x15 cm" value="">
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeCargoRow(this)">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Logistics & Freight Charges -->
+                                <div class="border rounded mb-4 shadow-sm bg-white" style="height: auto !important; min-height: 0 !important;">
+                                    <div class="bg-light border-bottom p-2 px-3">
+                                        <strong class="text-uppercase text-secondary" style="font-size: 0.85rem;">
+                                            <i class="bi bi-calculator text-success me-1"></i>3. Logistics & Freight Charges
+                                        </strong>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">Boxes Count</label>
+                                                <input type="number" name="boxes_count" class="form-control form-control-sm" min="0" value="{{ $quotation->boxes_count ?? 1 }}">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">Estimated Freight (<span class="currency-symbol">{{ $quotation->currency ?? 'PHP' }}</span>)</label>
+                                                <input type="number" step="0.01" min="0" name="estimated_freight" id="edit_estimated_freight" class="form-control form-control-sm" value="{{ $quotation->estimated_freight ?? 0 }}" oninput="calculateFreightTotal()">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">Handling Fee (<span class="currency-symbol">{{ $quotation->currency ?? 'PHP' }}</span>)</label>
+                                                <input type="number" step="0.01" min="0" name="handling_fee" id="edit_handling_fee" class="form-control form-control-sm" value="{{ $quotation->handling_fee ?? 0 }}" oninput="calculateFreightTotal()">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold text-success">Total Freight Amount</label>
+                                                <input type="number" step="0.01" min="0" name="total_amount" id="edit_total_amount" class="form-control form-control-sm fw-bold border-success text-success" value="{{ $quotation->total_amount ?? (($quotation->estimated_freight ?? 0) + ($quotation->handling_fee ?? 0)) }}">
+                                                <div class="form-text" style="font-size: 0.7rem;">Auto-sums Est. Freight + Handling Fee (+ Service Fee if Freight Collect)</div>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small fw-bold">Logistics Notes / Instructions</label>
+                                                <textarea name="logistics_notes" rows="2" class="form-control form-control-sm" placeholder="e.g. Via Fedex 4Kilos, special handling...">{{ $quotation->logistics_notes }}</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 4. Sales Order Items (with Add Item feature) -->
+                                <div class="border rounded mb-4 shadow-sm bg-white" style="height: auto !important; min-height: 0 !important;">
+                                    <div class="bg-light border-bottom p-2 px-3 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong class="text-uppercase text-secondary" style="font-size: 0.85rem;">
+                                                <i class="bi bi-cart-check text-primary me-1"></i>4. Sales Order Items
+                                            </strong>
+                                            @if($quotation->salesOrder)
+                                                <span class="badge bg-primary ms-1" style="font-size: 0.75rem;">SO #{{ $quotation->salesOrder->so_number }}</span>
+                                            @endif
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-success py-0 px-2 fw-bold" style="font-size: 0.8rem;" onclick="addSOItemOnEdit()">
+                                            <i class="bi bi-plus-circle me-1"></i>Add Item
+                                        </button>
+                                    </div>
+                                    <div class="p-2">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered align-middle mb-0" id="editSoItemsTable">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="min-width: 250px;">Product / Item</th>
+                                                        <th style="width: 100px;">Quantity</th>
+                                                        <th style="width: 120px;">Unit Price</th>
+                                                        <th style="width: 110px;">Discount Val</th>
+                                                        <th style="width: 100px;">Disc Type</th>
+                                                        <th style="width: 120px;" class="text-end">Subtotal</th>
+                                                        <th style="width: 50px;" class="text-center">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="editSoItemsTableBody">
+                                                    @php
+                                                        $soItems = $quotation->salesOrder?->items ?? collect();
+                                                    @endphp
+                                                    @forelse($soItems as $index => $soItem)
+                                                        @php
+                                                            $prodName = $soItem->bookIndex ? $soItem->bookIndex->display_name : ($soItem->product?->name ?? $soItem->book?->name ?? $soItem->bundle?->name ?? 'Product');
+                                                            $itemGross = (float)$soItem->quantity * (float)$soItem->price;
+                                                            $itemDiscAmount = ($soItem->discount_type ?? 'percentage') === 'percentage'
+                                                                ? $itemGross * ((float)($soItem->discount_value ?? 0) / 100)
+                                                                : (float)($soItem->discount_value ?? 0);
+                                                            $itemSubtotal = max(0, $itemGross - $itemDiscAmount);
+                                                        @endphp
+                                                        <tr class="so-item-row" data-index="{{ $index }}">
+                                                            <td>
+                                                                <input type="hidden" name="so_items[{{ $index }}][id]" value="{{ $soItem->id }}">
+                                                                <strong>{{ $prodName }}</strong>
+                                                            </td>
+                                                            <td>
+                                                                <input type="number" min="1" name="so_items[{{ $index }}][quantity]" class="form-control form-control-sm edit-item-qty" value="{{ $soItem->quantity }}" oninput="recalcEditRow(this)">
+                                                            </td>
+                                                            <td>
+                                                                <input type="number" step="0.01" min="0" name="so_items[{{ $index }}][price]" class="form-control form-control-sm edit-item-price" value="{{ $soItem->price }}" oninput="recalcEditRow(this)">
+                                                            </td>
+                                                            <td>
+                                                                <input type="number" step="0.01" min="0" name="so_items[{{ $index }}][discount_value]" class="form-control form-control-sm edit-item-discount" value="{{ $soItem->discount_value ?? 0 }}" oninput="recalcEditRow(this)">
+                                                            </td>
+                                                            <td>
+                                                                <select name="so_items[{{ $index }}][discount_type]" class="form-select form-select-sm edit-item-discount-type" onchange="recalcEditRow(this)">
+                                                                    <option value="percentage" {{ ($soItem->discount_type ?? 'percentage') === 'percentage' ? 'selected' : '' }}>%</option>
+                                                                    <option value="amount" {{ ($soItem->discount_type ?? '') === 'amount' ? 'selected' : '' }}>Amount</option>
+                                                                </select>
+                                                            </td>
+                                                            <td class="text-end fw-bold edit-item-subtotal">
+                                                                {{ number_format($itemSubtotal, 2) }}
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeSOItemOnEdit(this)">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr id="noSoItemsPlaceholder">
+                                                            <td colspan="7" class="text-center text-muted py-3">
+                                                                No items added yet. Click <strong><i class="bi bi-plus-circle text-success"></i> Add Item</strong> to add products.
+                                                            </td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                                <tfoot class="table-light">
+                                                    <tr>
+                                                        <th colspan="5" class="text-end">Items Subtotal:</th>
+                                                        <th class="text-end text-primary fw-bold" id="editSoTotalDisplay">0.00</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 5. Proof of Payment (Compact Box) -->
+                                <div class="proof-of-payment-box border rounded p-3 mb-4 bg-white shadow-sm" style="height: auto !important; min-height: 0 !important; max-height: max-content !important;">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center bg-light text-primary border" style="width: 32px; height: 32px;">
+                                                <i class="bi bi-receipt"></i>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 0.85rem;">5. Proof of Payment</strong>
+                                                <span class="badge {{ $popPath ? 'bg-success text-white' : 'bg-light text-muted border' }} ms-1" style="font-size: 0.7rem;">
+                                                    {{ $popPath ? 'Attached' : 'Optional' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        @if($popPath)
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="small text-muted"><i class="bi bi-file-earmark-check me-1"></i>{{ basename($popPath) }}</span>
+                                                <a href="{{ asset('storage/' . $popPath) }}" target="_blank" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.78rem;">
+                                                    <i class="bi bi-eye me-1"></i>View Current
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="row align-items-center g-2">
+                                        <div class="col-md-6">
+                                            <input type="file" name="proof_of_payment" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <span class="text-muted" style="font-size: 0.75rem;">
+                                                {{ $popPath ? 'Upload a file here if you wish to replace the current attachment.' : 'Upload deposit slip, bank transfer screenshot, or receipt (PDF, JPG, PNG).' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Form Bottom Action Bar -->
+                                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                    <button type="button" class="btn btn-light border px-3" onclick="toggleEditMode(false)">
+                                        <i class="bi bi-arrow-left me-1"></i>Cancel & Back to View
+                                    </button>
+                                    <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm">
+                                        <i class="bi bi-check-circle me-1"></i>Save All Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Hidden Product Source Select for Add Item Template -->
+    <select id="editProductSource" class="d-none">
+        <option value="">-- Select Product --</option>
+        @if(isset($products) && count($products) > 0)
+            @foreach($products as $prod)
+                <option value="{{ $prod->id }}" data-price="{{ $prod->price ?? 0 }}" data-name="{{ $prod->name ?? $prod->display_name }}">
+                    {{ $prod->display_name ?? $prod->name }} - {{ number_format($prod->price ?? 0, 2) }}
+                </option>
+            @endforeach
+        @endif
+    </select>
 
     @push('styles')
     <link href="{{ asset('vendor/datatables/css/jquery.dataTables.min.css') }}" rel="stylesheet">
@@ -517,12 +975,19 @@
             background: #e0e0e0;
             font-weight: bold;
         }
+        .proof-of-payment-box {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: max-content !important;
+        }
     </style>
     @endpush
 
     @push('scripts')
     <script src="{{ asset('vendor/datatables/js/jquery.dataTables.min.js') }}"></script>
     <script>
+        let soItemRowCounter = {{ isset($soItems) ? $soItems->count() + 10 : 100 }};
+
         $(document).ready(function() {
             if ($('#allBooksTable').length) {
                 $('#allBooksTable').DataTable({
@@ -532,7 +997,218 @@
                     responsive: true
                 });
             }
+
+            recalcAllEditTotals();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('edit') === '1' || urlParams.get('edit') === 'true') {
+                toggleEditMode(true);
+            }
         });
+
+        function toggleEditMode(isEdit) {
+            const viewDiv = document.getElementById('freightViewMode');
+            const editDiv = document.getElementById('freightEditMode');
+            const btnToggle = document.getElementById('btnToggleEdit');
+            const btnCancel = document.getElementById('btnCancelEditHeader');
+
+            if (isEdit) {
+                if (viewDiv) viewDiv.classList.add('d-none');
+                if (editDiv) editDiv.classList.remove('d-none');
+                if (btnToggle) btnToggle.classList.add('d-none');
+                if (btnCancel) btnCancel.classList.remove('d-none');
+                recalcAllEditTotals();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                if (viewDiv) viewDiv.classList.remove('d-none');
+                if (editDiv) editDiv.classList.add('d-none');
+                if (btnToggle) btnToggle.classList.remove('d-none');
+                if (btnCancel) btnCancel.classList.add('d-none');
+            }
+        }
+
+        function addCargoRow() {
+            const tbody = document.getElementById('cargoItemsTableBody');
+            if (!tbody) return;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="number" name="cargo_qty[]" class="form-control form-control-sm" min="1" value="1" required></td>
+                <td><input type="text" name="cargo_package_type[]" class="form-control form-control-sm" placeholder="e.g. Box, Crate" value="Box"></td>
+                <td><input type="text" name="cargo_dimensions[]" class="form-control form-control-sm" placeholder="e.g. 30x20x15 cm" value=""></td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeCargoRow(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function removeCargoRow(btn) {
+            const row = btn.closest('tr');
+            if (row) {
+                const tbody = row.parentElement;
+                if (tbody.querySelectorAll('tr').length > 1) {
+                    row.remove();
+                } else {
+                    row.querySelectorAll('input').forEach(input => input.value = '');
+                }
+            }
+        }
+
+        function calculateFreightTotal() {
+            const estInput = document.getElementById('edit_estimated_freight');
+            const hndInput = document.getElementById('edit_handling_fee');
+            const totInput = document.getElementById('edit_total_amount');
+            const optionSelect = document.getElementById('edit_freight_option');
+            const currencySelect = document.getElementById('edit_currency');
+            if (!estInput || !hndInput || !totInput) return;
+
+            const est = parseFloat(estInput.value) || 0;
+            const hnd = parseFloat(hndInput.value) || 0;
+            const opt = optionSelect ? optionSelect.value : '';
+            const curr = currencySelect ? currencySelect.value : 'PHP';
+
+            let serviceFee = 0;
+            if (opt === 'freight_collect') {
+                serviceFee = curr === 'USD' ? (50.0 / 56.0) : 50.0;
+            }
+
+            totInput.value = (est + hnd + serviceFee).toFixed(2);
+        }
+
+        function addSOItemOnEdit() {
+            const tbody = document.getElementById('editSoItemsTableBody');
+            if (!tbody) return;
+
+            const placeholder = document.getElementById('noSoItemsPlaceholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+
+            const productSource = document.getElementById('editProductSource');
+            const productOptions = productSource ? productSource.innerHTML : '<option value="">-- No Products Available --</option>';
+
+            soItemRowCounter++;
+            const idx = soItemRowCounter;
+
+            const tr = document.createElement('tr');
+            tr.className = 'so-item-row';
+            tr.setAttribute('data-index', idx);
+            tr.innerHTML = `
+                <td>
+                    <select name="so_items[${idx}][product_id]" class="form-select form-select-sm edit-item-prod" onchange="onProductSelectChanged(this)" required>
+                        ${productOptions}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" min="1" name="so_items[${idx}][quantity]" class="form-control form-control-sm edit-item-qty" value="1" oninput="recalcEditRow(this)">
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0" name="so_items[${idx}][price]" class="form-control form-control-sm edit-item-price" value="0.00" oninput="recalcEditRow(this)">
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0" name="so_items[${idx}][discount_value]" class="form-control form-control-sm edit-item-discount" value="0" oninput="recalcEditRow(this)">
+                </td>
+                <td>
+                    <select name="so_items[${idx}][discount_type]" class="form-select form-select-sm edit-item-discount-type" onchange="recalcEditRow(this)">
+                        <option value="percentage">%</option>
+                        <option value="amount">Amount</option>
+                    </select>
+                </td>
+                <td class="text-end fw-bold edit-item-subtotal">
+                    0.00
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeSOItemOnEdit(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+            recalcAllEditTotals();
+        }
+
+        function onProductSelectChanged(selectElem) {
+            const selectedOpt = selectElem.options[selectElem.selectedIndex];
+            if (!selectedOpt) return;
+
+            const price = selectedOpt.getAttribute('data-price') || 0;
+            const row = selectElem.closest('tr');
+            if (row) {
+                const priceInput = row.querySelector('.edit-item-price');
+                if (priceInput) {
+                    priceInput.value = parseFloat(price).toFixed(2);
+                }
+                recalcEditRow(selectElem);
+            }
+        }
+
+        function recalcEditRow(elementInRow) {
+            const row = elementInRow.closest('tr');
+            if (!row) return;
+
+            const qtyInput = row.querySelector('.edit-item-qty');
+            const priceInput = row.querySelector('.edit-item-price');
+            const discValInput = row.querySelector('.edit-item-discount');
+            const discTypeSelect = row.querySelector('.edit-item-discount-type');
+            const subtotalCell = row.querySelector('.edit-item-subtotal');
+
+            const qty = parseFloat(qtyInput?.value) || 0;
+            const price = parseFloat(priceInput?.value) || 0;
+            const discVal = parseFloat(discValInput?.value) || 0;
+            const discType = discTypeSelect ? discTypeSelect.value : 'percentage';
+
+            const gross = qty * price;
+            let discAmount = 0;
+            if (discType === 'percentage') {
+                discAmount = gross * (discVal / 100);
+            } else {
+                discAmount = discVal;
+            }
+
+            const subtotal = Math.max(0, gross - discAmount);
+            if (subtotalCell) {
+                subtotalCell.textContent = subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            recalcAllEditTotals();
+        }
+
+        function removeSOItemOnEdit(btn) {
+            const row = btn.closest('tr');
+            if (!row) return;
+
+            const tbody = row.parentElement;
+            row.remove();
+
+            if (tbody && tbody.querySelectorAll('tr.so-item-row').length === 0) {
+                tbody.innerHTML = `
+                    <tr id="noSoItemsPlaceholder">
+                        <td colspan="7" class="text-center text-muted py-3">
+                            No items added yet. Click <strong><i class="bi bi-plus-circle text-success"></i> Add Item</strong> to add products.
+                        </td>
+                    </tr>
+                `;
+            }
+
+            recalcAllEditTotals();
+        }
+
+        function recalcAllEditTotals() {
+            const subtotalCells = document.querySelectorAll('#editSoItemsTableBody .edit-item-subtotal');
+            let sum = 0;
+            subtotalCells.forEach(cell => {
+                const val = parseFloat(cell.textContent.replace(/,/g, '')) || 0;
+                sum += val;
+            });
+
+            const totalDisplay = document.getElementById('editSoTotalDisplay');
+            if (totalDisplay) {
+                totalDisplay.textContent = sum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        }
     </script>
     @endpush
 </x-app-layout>

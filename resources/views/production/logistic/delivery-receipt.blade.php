@@ -1,7 +1,7 @@
 <x-app-layout :title="'Delivery Receipt'" :sidebar="$sidebar ?? 'production'">
     <div class="row">
         <div class="col-xl-12">
-            <div class="card receipt-form">
+            <div class="card receipt-form d-print-none">
 
 
                 <!-- Form Header -->
@@ -554,9 +554,18 @@
 
                 <!-- Form Actions -->
                 <div class="form-actions">
-                    <button type="button" class="btn btn-light" onclick="window.print()">
-                        <i class="las la-print"></i> Print
-                    </button>
+                    @php
+                        $bulkPrintUrl = $order ? route(($sidebar ?? '') === 'admin-finance' ? 'admin-finance.accounting.delivery-receipt.bulk-print' : 'production.logistic.delivery-receipt.bulk-print', ['ids' => $order->id, 'autoprint' => 1]) : null;
+                    @endphp
+                    @if($bulkPrintUrl)
+                        <a href="{{ $bulkPrintUrl }}" target="_blank" class="btn btn-light shadow-sm">
+                            <i class="las la-print me-1"></i> Print
+                        </a>
+                    @else
+                        <button type="button" class="btn btn-light shadow-sm" onclick="window.print()">
+                            <i class="las la-print me-1"></i> Print
+                        </button>
+                    @endif
                     @if(!$order)
                         <button type="button" class="btn btn-primary">
                             <i class="las la-save"></i> Save Receipt
@@ -625,6 +634,192 @@
                         @endif
                     @endif
                 </div>
+            </div>
+
+            @if($order)
+            <!-- Dedicated Print Layout: Exact Match to Bulk Print DR (Image 2) -->
+            <div class="dr-box print-only-dr">
+                <!-- Form Header -->
+                <div class="form-header">
+                    <div class="company-info">
+                        <img src="{{ asset('images/claeritian_logo.png') }}" alt="Claretian Logo" class="company-logo-img" onerror="this.style.display='none'">
+                        <div>
+                            <div class="company-name">CLARETIAN COMMUNICATIONS FOUNDATION INC.</div>
+                            <div class="company-address">8 Mayumi St., UP Village, Diliman, Quezon City</div>
+                            <div class="company-contact">Tel. No.: 921-3984</div>
+                        </div>
+                    </div>
+                    <div class="document-title">DELIVERY RECEIPT</div>
+                    <div class="text-center text-muted small fw-bold mt-1">NON-VAT REGISTERED</div>
+                    <div class="text-center extra-small text-muted fst-italic">"This document is not valid for claim of input taxes."</div>
+                </div>
+
+                <!-- Receipt Details Grid -->
+                <table class="form-info-grid">
+                    <tr>
+                        <td class="label-col">DR No.:</td>
+                        <td class="val-col" style="width: 35%;">{{ $deliveryReceipt?->dr_number ?: 'DR-' . $order->so_number }}</td>
+                        <td class="label-col" style="padding-left: 15px;">Date:</td>
+                        <td class="val-col">{{ $order->dr_prepared_at ? \Carbon\Carbon::parse($order->dr_prepared_at)->format('M d, Y') : ($order->created_at ? $order->created_at->format('M d, Y') : date('M d, Y')) }}</td>
+                    </tr>
+                    @if($isNBS && !empty($poNumber))
+                    <tr>
+                        <td class="label-col">Sales Order:</td>
+                        <td class="val-col">{{ $order->so_number }}</td>
+                        <td class="label-col" style="padding-left: 15px;">PO Number:</td>
+                        <td class="val-col">{{ $poNumber }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Company:</td>
+                        <td class="val-col">{{ $displayCompanyName }}</td>
+                        <td class="label-col" style="padding-left: 15px;">Terms:</td>
+                        <td class="val-col">{{ $order->terms ?: 'Standard' }}</td>
+                    </tr>
+                    @else
+                    <tr>
+                        <td class="label-col">Sales Order:</td>
+                        <td class="val-col">{{ $order->so_number }}</td>
+                        <td class="label-col" style="padding-left: 15px;">Terms:</td>
+                        <td class="val-col">{{ $order->terms ?: 'Standard' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Company:</td>
+                        <td class="val-col" colspan="3">{{ $displayCompanyName }}</td>
+                    </tr>
+                    @endif
+                    <tr>
+                        <td class="label-col">Customer:</td>
+                        <td class="val-col">{{ $order->customer_representative ?: ($order->customer->customer_name ?? 'Unknown') }}</td>
+                        <td class="label-col" style="padding-left: 15px;">Contact:</td>
+                        <td class="val-col">{{ $order->customer_contact ?: ($order->customer?->mobile ?: ($order->customer?->main_phone ?: 'N/A')) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Address:</td>
+                        <td class="val-col" colspan="3">{{ $order->shipping_address ?: ($order->customer->shipping_address ?? $order->customer->billing_address ?? 'N/A') }}</td>
+                    </tr>
+                    @if($order->cancellation_date)
+                    <tr>
+                        <td class="label-col cancellation-date-print">Cancel Date:</td>
+                        <td class="val-col cancellation-date-print" colspan="3">{{ \Carbon\Carbon::parse($order->cancellation_date)->format('M d, Y') }}</td>
+                    </tr>
+                    @endif
+                    @if($order->remarks || $order->notes || ($deliveryReceipt->remarks ?? null))
+                    <tr>
+                        <td class="label-col">Remarks:</td>
+                        <td class="val-col" colspan="3">{{ $order->remarks ?: ($order->notes ?: ($deliveryReceipt->remarks ?? '')) }}</td>
+                    </tr>
+                    @endif
+                </table>
+
+                <!-- Delivery Receipt Items Table (NO AMOUNTS - QTY LANG NG TITLES AS IN PIC 3) -->
+                <table class="receipt-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%; text-align: center;">QTY</th>
+                            <th style="width: 12%; text-align: center;">U/M</th>
+                            <th style="width: 56%;">Items / Particulars</th>
+                            <th style="width: 20%; text-align: center;">ISBN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php $totalPrintQty = 0; @endphp
+                        @forelse($displayItems as $item)
+                            @php
+                                $sQty = (float)($item->sent_qty ?? 0);
+                                $rQty = (float)($item->requested_qty ?? 0);
+                                $iQty = (float)($item->quantity ?? 0);
+                                $plReqQty = 0;
+                                if (isset($item->pickListItems) && count($item->pickListItems) > 0) {
+                                    $plReqQty = (float)($item->pickListItems->first()->requested_qty ?? 0);
+                                } elseif (isset($item->pick_list_items) && count($item->pick_list_items) > 0) {
+                                    $plReqQty = (float)($item->pick_list_items->first()->requested_qty ?? 0);
+                                }
+
+                                if ($sQty > 0) {
+                                    $qty = (int)$sQty;
+                                } elseif ($iQty > 0) {
+                                    $qty = (int)$iQty;
+                                } elseif ($rQty > 0) {
+                                    $qty = (int)$rQty;
+                                } elseif ($plReqQty > 0) {
+                                    $qty = (int)$plReqQty;
+                                } else {
+                                    $qty = (int)$iQty;
+                                }
+
+                                $pickQty = (!empty($item->customer_selected_qty) && (float)$item->customer_selected_qty > 0) 
+                                    ? (int)$item->customer_selected_qty 
+                                    : ($qty > 0 ? $qty : (int)($item->quantity ?? 0));
+                                $displayQty = $isConsignment ? $pickQty : $qty;
+                                if ($displayQty <= 0) $displayQty = (int)$iQty;
+                                $totalPrintQty += $displayQty;
+
+                                $unit = $item->unit ?: 'pc';
+
+                                $articleNo = $item->article_number 
+                                    ?? ($item->article 
+                                    ?? ($item->bookIndex->article_number 
+                                    ?? ($item->bookIndex->article 
+                                    ?? ($item->book?->article_number 
+                                    ?? ($item->book?->article 
+                                    ?? ($item->bookIndex->barcode 
+                                    ?? ($item->bookIndex->item_code 
+                                    ?? ($item->book?->sku 
+                                    ?? ($item->book?->item_code ?? null)))))))));
+
+                                $isbn = $item->isbn ?? ($item->book?->isbn ?? ($item->bookIndex?->isbn ?? ($articleNo ?? '')));
+                            @endphp
+                            <tr>
+                                <td style="text-align: center; font-weight: bold; font-size: 10pt;">{{ $displayQty }}</td>
+                                <td style="text-align: center;">{{ $unit }}</td>
+                                <td style="font-weight: 600;">
+                                    {{ $item->bookIndex?->display_name ?? ($item->bookIndex?->title ?? ($item->bookIndex?->custom_name ?? ($item->bookIndex?->book?->name ?? ($item->book?->name ?? ($item->bundle?->name ?? ($item->product?->name ?? ($item->item_name ?? ($item->product_name ?? 'Unknown Item')))))))) }}
+                                    @if($item->bookIndex || !empty($item->book_index_id))
+                                        <span class="badge border border-dark text-dark ms-1" style="font-size: 9px; padding: 1px 5px; vertical-align: middle; border-radius: 4px;">Index</span>
+                                    @endif
+                                    @if($isNBS && !empty($articleNo))
+                                        <div style="font-size: 11px; font-weight: bold; color: #000; margin-top: 2px;">
+                                            Article #: {{ $articleNo }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td style="text-align: center; font-size: 9pt; color: #333;">{{ $isbn ?: '—' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center py-2 text-muted">No items found for this delivery receipt</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr style="background-color: #f8f9fa;">
+                            <td style="text-align: center; font-weight: bold; font-size: 10pt;">{{ $totalPrintQty }}</td>
+                            <td style="text-align: center; font-weight: bold;">pcs</td>
+                            <td colspan="2" style="font-weight: bold; text-transform: uppercase; font-size: 0.85rem; padding-left: 8px;">Total Quantity Delivered</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- Signature Section -->
+                <div class="signature-section">
+                    <div class="signature-box">
+                        <label>Prepared by:</label>
+                        <div class="signature-name">{{ $preparedByName }}</div>
+                        <div class="signature-line-box">SIGNATURE OVER PRINTED NAME</div>
+                    </div>
+                    <div class="signature-box">
+                        <label>Approved by:</label>
+                        <div class="signature-name">{{ $approvedByName }}</div>
+                        <div class="signature-line-box">SIGNATURE OVER PRINTED NAME</div>
+                    </div>
+                    <div class="signature-box">
+                        <label>Received by:</label>
+                        <div class="signature-name">{{ $receivedByName }}</div>
+                        <div class="signature-line-box">SIGNATURE OVER PRINTED NAME</div>
+                    </div>
+                </div>
+            </div>
+            @endif
 
     <!-- Modal System -->
     <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
@@ -957,13 +1152,9 @@
         }
 
         .print-only-remarks,
-        .print-only-article {
-            display: none;
-        }
-
-        @page {
-            size: letter portrait; /* Short bond paper (8.5in x 11in) */
-            margin: 0.25in 0.35in;
+        .print-only-article,
+        .print-only-dr {
+            display: none !important;
         }
 
         @media print {
@@ -976,16 +1167,17 @@
             body, html {
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-size: 10.5px !important;
-                line-height: 1.2 !important;
-                margin: 0 !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                font-family: Arial, Helvetica, sans-serif !important;
             }
 
             /* Hide UI elements, navigation, buttons, and helper bars */
             .sidebar,
             .header,
             .nav-header,
+            .deznav,
+            .footer,
             .form-actions,
             .btn-add-row,
             .btn-remove-row,
@@ -994,317 +1186,209 @@
             .modal,
             button,
             .btn,
+            .d-print-none,
+            .receipt-form,
             div[style*="background: #e7f3ff"],
             .card.p-3.my-3.border.bg-light,
             .d-flex.justify-content-between.align-items-center.mb-3,
             .alert,
             .toast,
-            no-print {
+            .no-print {
                 display: none !important;
             }
 
-            /* Make textareas and inputs look clean and transparent without borders or resize handles */
-            .form-info-item input,
-            .form-group input,
-            .form-group textarea,
-            textarea,
-            input {
-                border: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                background: transparent !important;
-                outline: none !important;
-                box-shadow: none !important;
-                color: #000000 !important;
-                font-size: 10.5px !important;
-                resize: none !important;
-                min-height: auto !important;
-                height: auto !important;
-                overflow: hidden !important;
-                -webkit-appearance: none !important;
-                appearance: none !important;
-            }
-
-            /* Show the table cleanly */
-            .receipt-table {
-                width: 100% !important;
-                page-break-inside: auto;
-                display: table !important;
-                margin-bottom: 0.5rem !important;
-                font-size: 10.5px !important;
-                border-collapse: collapse !important;
-            }
-
-            .receipt-table thead {
-                display: table-header-group !important;
-                page-break-inside: avoid;
-            }
-
-            .receipt-table tbody {
-                display: table-row-group !important;
-            }
-
-            .receipt-table tfoot {
-                display: table-row-group !important;
-                page-break-inside: avoid !important;
-            }
-
-            .receipt-table tr {
-                display: table-row !important;
-                page-break-inside: avoid !important;
-            }
-
-            .receipt-table th,
-            .receipt-table td {
-                display: table-cell !important;
-                border: 1px solid #000000 !important;
-                padding: 3px 5px !important;
-                font-size: 10.5px !important;
-            }
-
-            .receipt-table th {
-                background: #e9ecef !important;
-                color: #000000 !important;
-                font-weight: bold !important;
-                text-transform: uppercase !important;
-            }
-
-            .receipt-table td {
-                background: #ffffff !important;
-                color: #000000 !important;
-                font-weight: 700 !important;
-            }
-
-            .receipt-table span,
-            .receipt-table div {
-                color: #000000 !important;
-            }
-
-            .badge,
-            span.badge {
-                background: transparent !important;
-                background-color: transparent !important;
-                color: #000000 !important;
-                border: 1px solid #000000 !important;
-                font-weight: bold !important;
-                font-size: 10px !important;
-                padding: 1px 4px !important;
-                box-shadow: none !important;
-            }
-
-            /* Show table inputs as text */
-            .receipt-table input[type="number"],
-            .receipt-table input[type="text"] {
-                border: none !important;
-                padding: 0 !important;
-                background: transparent !important;
-                outline: none !important;
-                color: #000000 !important;
-                font-family: inherit;
-                width: auto;
-                font-size: 10.5px !important;
-                text-align: inherit;
-            }
-
-            .pick-qty-col,
-            th.pick-qty-col,
-            td.pick-qty-col {
-                display: none !important;
-            }
-
-            /* Clean up receipt form container */
-            .receipt-form,
-            .card {
-                box-shadow: none !important;
-                padding: 0 !important;
+            /* Show Dedicated Print Container (Matching Bulk Print DR) */
+            .print-only-dr {
+                display: block !important;
+                background: #fff !important;
                 max-width: 100% !important;
+                width: 100% !important;
                 margin: 0 !important;
+                padding: 0 !important;
                 border: none !important;
-                background: transparent !important;
+                box-shadow: none !important;
             }
 
-            .form-header {
-                margin-bottom: 0.5rem !important;
-                padding-bottom: 0.35rem !important;
-                border-bottom: 2px solid #000000 !important;
-                text-align: center !important;
-            }
-
-            .form-header .company-info {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                gap: 0.75rem !important;
-                margin-bottom: 0.25rem !important;
+            .print-only-dr .form-header {
+                margin-bottom: 1.25rem !important;
+                padding-bottom: 0.75rem !important;
+                border-bottom: 2px solid #333 !important;
+                display: block !important;
                 text-align: left !important;
             }
 
-            .form-header .company-logo-img {
-                display: block !important;
-                height: 42px !important;
+            .print-only-dr .company-info {
+                display: flex !important;
+                align-items: center !important;
+                gap: 1rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+
+            .print-only-dr .company-logo-img {
+                height: 55px !important;
                 width: auto !important;
                 object-fit: contain !important;
+                display: inline-block !important;
             }
 
-            .form-header .company-details {
-                flex: none !important;
-            }
-
-            .form-header .company-name {
-                font-size: 1rem !important;
-                font-weight: bold !important;
+            .print-only-dr .company-name {
+                font-size: 1.15rem !important;
+                font-weight: 800 !important;
+                color: #000 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.3px !important;
                 margin-bottom: 2px !important;
-                color: #000000 !important;
             }
 
-            .form-header .company-address,
-            .form-header .company-contact {
-                font-size: 0.75rem !important;
-                margin: 0 !important;
-                color: #000000 !important;
+            .print-only-dr .company-address,
+            .print-only-dr .company-contact {
+                font-size: 0.82rem !important;
+                color: #333 !important;
+                line-height: 1.2 !important;
             }
 
-            .form-header div.text-muted,
-            .form-header .extra-small {
+            .print-only-dr .document-title {
+                text-align: center !important;
+                font-size: 1.6rem !important;
+                font-weight: 900 !important;
+                color: #000 !important;
+                margin-top: 0.5rem !important;
+                letter-spacing: 1.5px !important;
+            }
+
+            .print-only-dr .form-info-grid {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-bottom: 1rem !important;
+                font-size: 0.88rem !important;
+            }
+
+            .print-only-dr .form-info-grid td {
+                padding: 4px 6px !important;
+                vertical-align: top !important;
+                border: none !important;
+            }
+
+            .print-only-dr .form-info-grid .label-col {
+                font-weight: bold !important;
+                color: #000 !important;
+                white-space: nowrap !important;
+                width: 110px !important;
+            }
+
+            .print-only-dr .form-info-grid .val-col {
+                border-bottom: 1px solid #777 !important;
+                font-weight: 600 !important;
+                color: #111 !important;
+            }
+
+            .print-only-dr .receipt-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-bottom: 1.25rem !important;
+                font-size: 0.85rem !important;
+            }
+
+            .print-only-dr .receipt-table thead th {
+                background-color: #ff0000 !important;
+                color: #ffffff !important;
+                padding: 7px 10px !important;
+                font-weight: 800 !important;
+                text-align: left !important;
+                border: 1px solid #ff0000 !important;
+                font-size: 0.83rem !important;
+                text-transform: uppercase !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .print-only-dr .receipt-table tbody td {
+                padding: 6px 10px !important;
+                border: 1px solid #000000 !important;
+                vertical-align: middle !important;
                 color: #000000 !important;
                 font-weight: 700 !important;
-            }
-
-            .document-title {
-                font-size: 1.15rem !important;
-                font-weight: bold !important;
-                margin-top: 0.25rem !important;
-                margin-bottom: 0.15rem !important;
-                letter-spacing: 1px !important;
-                color: #000000 !important;
-            }
-
-            .form-info-row {
-                background: transparent !important;
-                border: none !important;
-                padding: 0.15rem 0 !important;
-                margin-bottom: 0.35rem !important;
-                display: flex !important;
-                flex-wrap: wrap !important;
-                gap: 0.5rem 1rem !important;
-                justify-content: space-between !important;
-            }
-
-            .form-info-item {
-                flex: 1 1 auto !important;
-                min-width: 130px !important;
-            }
-
-            .cancellation-date-label,
-            .cancellation-date-input,
-            .form-info-item.cancellation-date-item input,
-            .form-info-item.cancellation-date-item label {
-                color: #000000 !important;
-                -webkit-text-fill-color: #000000 !important;
-                font-weight: 900 !important;
                 font-size: 11px !important;
-                opacity: 1 !important;
-            }
-
-            .form-info-item label,
-            .form-group label {
-                font-size: 0.75rem !important;
-                font-weight: bold !important;
-                margin-bottom: 0px !important;
-                display: block !important;
-                color: #000000 !important;
-            }
-
-            .form-group {
-                background: transparent !important;
-                border: none !important;
-                padding: 0.15rem 0 !important;
-                margin-bottom: 0.25rem !important;
-            }
-
-            .screen-only-remarks {
-                display: none !important;
-            }
-
-            .print-only-remarks {
-                display: block !important;
-                border: 1px solid #ccc !important;
-                padding: 0.35rem 0.5rem !important;
-                font-size: 0.75rem !important;
-                font-weight: 600 !important;
+                line-height: 1.3 !important;
                 background: #ffffff !important;
-                color: #000000 !important;
-                white-space: pre-wrap !important;
-                word-break: break-word !important;
-                min-height: 30px !important;
             }
 
-            .print-only-article {
-                display: block !important;
-                font-size: 11px !important;
-                font-weight: bold !important;
+            .print-only-dr .receipt-table tfoot td {
+                padding: 5px 10px !important;
+                border: 1px solid #000000 !important;
+                font-size: 0.85rem !important;
                 color: #000000 !important;
-                margin-top: 2px !important;
+                font-weight: 700 !important;
+                background: #ffffff !important;
             }
 
-            /* Signature section */
-            .signature-section {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                page-break-before: auto !important;
-                margin-top: 1rem !important;
-                border-top: none !important;
-                padding-top: 0.5rem !important;
+            .print-only-dr .signature-section {
                 display: table !important;
                 table-layout: fixed !important;
                 width: 100% !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                margin-top: 1.5rem !important;
+                padding-top: 0.5rem !important;
+                border-top: none !important;
                 clear: both !important;
             }
 
-            .signature-box {
+            .print-only-dr .signature-box {
                 display: table-cell !important;
                 width: 33.33% !important;
                 vertical-align: top !important;
+                padding: 0 10px !important;
                 text-align: center !important;
-                padding: 0 8px !important;
             }
 
-            .signature-box label {
-                font-weight: bold !important;
-                display: block !important;
-                font-size: 0.75rem !important;
-                margin-bottom: 0.15rem !important;
-                color: #000000 !important;
-                text-align: left !important;
-            }
-
-            .signature-box input {
-                display: none !important;
-            }
-
-            .signature-input-wrapper {
-                display: block !important;
-                min-height: 22px !important;
-                margin-bottom: 0.25rem !important;
-            }
-
-            .signature-value-display {
-                display: block !important;
-                color: #000000 !important;
-                font-weight: bold !important;
+            .print-only-dr .signature-box label {
+                font-weight: 700 !important;
+                color: #000 !important;
                 font-size: 0.85rem !important;
-                min-height: 1.2rem !important;
-                text-align: center !important;
+                margin-bottom: 1.5rem !important;
+                text-align: left !important;
+                display: block !important;
             }
 
-            .signature-line-box,
-            .signature-box div[style*="border-top"] {
-                border-top: 1px solid #000000 !important;
+            .print-only-dr .signature-line-box {
                 text-align: center !important;
-                padding-top: 0.15rem !important;
-                font-size: 0.75rem !important;
+                border-top: 1.5px solid #000 !important;
+                padding-top: 4px !important;
+                font-size: 10px !important;
+                font-weight: 800 !important;
+                color: #000 !important;
+            }
+
+            .print-only-dr .signature-name {
                 font-weight: bold !important;
+                font-size: 0.9rem !important;
+                text-align: center !important;
+                margin-bottom: 4px !important;
+                min-height: 1.2rem !important;
+                color: #000 !important;
+            }
+
+            .print-only-dr .cancellation-date-print {
                 color: #000000 !important;
+                -webkit-text-fill-color: #000000 !important;
+                font-weight: 900 !important;
+                opacity: 1 !important;
+            }
+
+            .print-only-dr .badge,
+            .print-only-dr span.badge {
+                background: transparent !important;
+                color: #000000 !important;
+                border: 1px solid #000000 !important;
+                font-weight: 800 !important;
+                font-size: 10px !important;
+                padding: 1px 5px !important;
+            }
+
+            @page {
+                size: letter portrait;
+                margin: 0.35in 0.4in;
             }
 
             body,
@@ -1312,9 +1396,6 @@
             #main-wrapper,
             .content-body,
             .container-fluid,
-            .receipt-form,
-            .table-responsive,
-            .card,
             .row,
             .col-xl-12 {
                 margin: 0 !important;

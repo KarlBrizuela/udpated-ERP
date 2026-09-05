@@ -29,15 +29,30 @@ class POSController extends Controller
     {
         $normalizedChannel = strtolower(trim($channel));
 
-        if (in_array($normalizedChannel, ['mibf', 'mibf_pos', 'ecom', 'ecom_pos'])) {
-            // 1. MIBF POS: Check latest MIBF SalesOrder with non-empty si_number
+        if (in_array($normalizedChannel, ['mibf', 'mibf_pos', 'ecom', 'ecom_pos', 'lazada', 'shopee', 'tiktok', 'cob', 'ecom_direct'])) {
+            // Check specific platform first if specified
+            if (in_array($normalizedChannel, ['lazada', 'shopee', 'tiktok', 'cob'])) {
+                $lastPlatformOrder = SalesOrder::whereNotNull('si_number')
+                    ->where('si_number', '!=', '')
+                    ->where('type', 'ecom_direct')
+                    ->whereRaw('LOWER(ecom_platform) = ?', [$normalizedChannel])
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($lastPlatformOrder && !empty($lastPlatformOrder->si_number)) {
+                    return self::calculateNextSiNumber($lastPlatformOrder->si_number);
+                }
+            }
+
+            // General E-Com / MIBF POS: Check latest E-com / MIBF SalesOrder with non-empty si_number
             $lastOrder = SalesOrder::whereNotNull('si_number')
                 ->where('si_number', '!=', '')
                 ->where(function($q) {
                     $q->where('type', 'ecom_direct')
                       ->orWhere('ecom_platform', 'MIBF')
                       ->orWhere('platform', 'mibf')
-                      ->orWhere('so_number', 'like', 'MIBF-%');
+                      ->orWhere('so_number', 'like', 'MIBF-%')
+                      ->orWhere('so_number', 'like', 'DI-ECOM-%');
                 })
                 ->orderBy('id', 'desc')
                 ->first();
@@ -46,10 +61,13 @@ class POSController extends Controller
                 return self::calculateNextSiNumber($lastOrder->si_number);
             }
 
-            // Also check latest SalesInvoice with transaction_type = 'mibf_si'
+            // Also check latest SalesInvoice with transaction_type in ['mibf_si', 'ecom_direct_si']
             $lastInvoice = \App\Models\SalesInvoice::whereNotNull('si_number')
                 ->where('si_number', '!=', '')
-                ->where('transaction_type', 'mibf_si')
+                ->where(function($q) {
+                    $q->where('transaction_type', 'mibf_si')
+                      ->orWhere('transaction_type', 'ecom_direct_si');
+                })
                 ->orderBy('id', 'desc')
                 ->first();
 
@@ -160,7 +178,7 @@ class POSController extends Controller
      */
     public function getNextSiNumberResponse(Request $request)
     {
-        $channel = $request->query('channel', $request->query('type', 'pos'));
+        $channel = $request->query('channel', $request->query('platform', $request->query('type', 'pos')));
         return response()->json([
             'success' => true,
             'channel' => $channel,
@@ -308,6 +326,10 @@ class POSController extends Controller
                 'discount_amount'  => $discountAmount,
                 'discount_percentage' => $discountPercentage ?? 0,
                 'prepared_by'      => auth()->id(),
+                'si_prepared_by'   => auth()->id(),
+                'si_prepared_at'   => now(),
+                'signed_by_af_manager' => auth()->id(),
+                'signed_at'        => now(),
                 'approved_by_mkt'  => auth()->id(),
                 'approved_by_acct' => auth()->id(),
                 'mkt_approved_at'  => now(),
@@ -682,6 +704,10 @@ class POSController extends Controller
                 'discount_percentage' => $discountPercentage ?? 0,
                 'remarks' => $validated['notes'] ?? null,
                 'prepared_by' => auth()->id(),
+                'si_prepared_by' => auth()->id(),
+                'si_prepared_at' => now(),
+                'signed_by_af_manager' => auth()->id(),
+                'signed_at' => now(),
                 'approved_by_mkt' => auth()->id(),
                 'approved_by_acct' => auth()->id(),
                 'mkt_approved_at' => now(),

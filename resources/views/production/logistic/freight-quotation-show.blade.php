@@ -149,9 +149,22 @@
                         <p><strong>Service Mode:</strong> {{ $quotation->service_mode }}</p>
                         <p><strong>Forwarder:</strong> {{ $quotation->forwarder ?? $quotation->salesOrder?->forwarder ?? $quotation->freight_mode ?? 'N/A' }}</p>
                         <p><strong>Transaction Type:</strong> {{ $quotation->transaction_type ? ucwords(str_replace('_', ' ', $quotation->transaction_type)) : 'Paid' }}</p>
+                        <p><strong>Terms:</strong> {{ $quotation->terms ?: 'N/A' }}</p>
                         <p><strong>Currency:</strong> <span class="badge bg-danger text-white fs-6">{{ $quotation->currency ?? 'PHP' }} ({{ ($quotation->currency ?? 'PHP') === 'USD' ? '$' : (($quotation->currency ?? 'PHP') === 'EUR' ? '€' : '₱') }})</span></p>
                         <p><strong>Freight Option:</strong> {{ $quotation->freight_option ? ucwords(str_replace('_', ' ', $quotation->freight_option)) : 'N/A' }}</p>
                         <p><strong>Service Fee:</strong> {{ $quotation->freight_option === 'freight_collect' ? 'Applies to Freight Collect' : 'No service fee for Freight Billing' }}</p>
+                        @php
+                            $logisticsPop = $quotation->proof_of_payment ?: ($quotation->salesOrder?->proof_of_payment ?? null);
+                        @endphp
+                        <p><strong>Proof of Payment:</strong>
+                            @if($logisticsPop)
+                                <a href="{{ asset('storage/' . $logisticsPop) }}" target="_blank" class="btn btn-xs btn-outline-success ms-1">
+                                    <i class="bi bi-paperclip me-1"></i>View Attachment ({{ basename($logisticsPop) }})
+                                </a>
+                            @else
+                                <span class="text-muted">Not attached (Optional)</span>
+                            @endif
+                        </p>
 
                         <hr>
 

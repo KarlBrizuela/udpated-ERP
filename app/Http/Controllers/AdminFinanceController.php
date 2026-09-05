@@ -1379,14 +1379,15 @@ public function checkVoucher()
         \App\Models\SalesInvoice::firstOrCreate(
             ['so_id' => $so->id],
             [
-                'si_number' => 'SI-' . $so->so_number,
+                'si_number' => $so->si_number ?: ('SI-' . $so->so_number),
                 'customer_id' => $so->customer_id,
                 'customer_name' => $so->customer->customer_name ?? 'N/A',
                 'total_amount' => $so->total_amount,
                 'transaction_type' => $so->type . '_si',
                 'payment_method' => $so->payment_method ?? 'cash',
                 'status' => 'approved',
-                'created_by' => $so->signed_by_af_manager ?? (auth()->id() ?? 1)
+                'created_by' => $so->si_prepared_by ?: ($so->prepared_by ?: (auth()->id() ?? 1)),
+                'approved_by' => $so->signed_by_af_manager ?: ($so->approved_by_acct ?: (auth()->id() ?? 1))
             ]
         );
     }
@@ -1544,6 +1545,8 @@ public function checkVoucher()
         'si_prepared_at' => now(),
         'signed_by_af_manager' => auth()->id(),
         'signed_at' => now(),
+        'approved_by_acct' => auth()->id(),
+        'acct_approved_at' => now(),
         'remarks' => ($order->remarks ? $order->remarks . ' | ' : '') . 'SI Prepared and auto-signed by ' . auth()->user()->name
       ]);
 
@@ -1559,7 +1562,7 @@ public function checkVoucher()
           'created_by' => auth()->id()
         ]
       );
-      $si->update(['si_number' => $siNumberVal, 'status' => 'approved', 'posted_at' => now(), 'payment_method' => $order->payment_method ?? 'cash']);
+      $si->update(['si_number' => $siNumberVal, 'status' => 'approved', 'posted_at' => now(), 'approved_by' => auth()->id(), 'payment_method' => $order->payment_method ?? 'cash']);
 
       // --- ACCOUNTING INTEGRATION ---
       $this->accounting->postSalesOrderEntry($order);
@@ -1648,6 +1651,25 @@ public function checkVoucher()
       'remarks' => ($order->remarks ? $order->remarks . ' | ' : '') . 'SI Prepared by ' . auth()->user()->name
     ]);
 
+    $siNumberVal = $order->si_number ?: ($request->input('si_number') ?: 'SI-' . $order->so_number);
+    $si = \App\Models\SalesInvoice::firstOrCreate(
+      ['so_id' => $order->id],
+      [
+        'si_number' => $siNumberVal,
+        'customer_id' => $order->customer_id,
+        'customer_name' => $order->customer->customer_name ?? 'N/A',
+        'total_amount' => $order->total_amount,
+        'transaction_type' => $order->type . '_si',
+        'created_by' => auth()->id()
+      ]
+    );
+    $si->update([
+      'si_number' => $siNumberVal,
+      'status' => 'pending_approval',
+      'created_by' => $si->created_by ?: auth()->id(),
+      'payment_method' => $order->payment_method ?? 'cash'
+    ]);
+
     // Send Notification to Director if status is "pending_si_approval"
     $director = \App\Models\User::where('position', 'Director')->first();
     if ($director) {
@@ -1695,7 +1717,14 @@ public function checkVoucher()
             'si_prepared_at' => now(),
             'signed_by_af_manager' => auth()->id(),
             'signed_at' => now(),
+            'approved_by_acct' => auth()->id(),
+            'acct_approved_at' => now(),
             'remarks' => ($order->remarks ? $order->remarks . ' | ' : '') . 'SI Prepared and auto-signed in bulk by ' . auth()->user()->name
+          ]);
+
+          \App\Models\SalesInvoice::where('so_id', $order->id)->update([
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
           ]);
 
           // --- ACCOUNTING INTEGRATION ---
@@ -1729,6 +1758,21 @@ public function checkVoucher()
               'si_prepared_at' => now(),
               'remarks' => ($order->remarks ? $order->remarks . ' | ' : '') . 'SI Prepared in bulk by ' . auth()->user()->name
             ]);
+
+            $siNumberVal = $order->si_number ?: 'SI-' . $order->so_number;
+            $bulkSi = \App\Models\SalesInvoice::firstOrCreate(
+              ['so_id' => $order->id],
+              [
+                'si_number' => $siNumberVal,
+                'customer_id' => $order->customer_id,
+                'customer_name' => $order->customer->customer_name ?? 'N/A',
+                'total_amount' => $order->total_amount,
+                'transaction_type' => $order->type . '_si',
+                'created_by' => auth()->id(),
+                'status' => 'pending_approval'
+              ]
+            );
+            $bulkSi->update(['status' => 'pending_approval', 'created_by' => $bulkSi->created_by ?: auth()->id()]);
 
             if (in_array($order->type, ['area_consignment', 'area_sales_consignment', 'direct_consignment'])) {
               \App\Models\SalesInvoice::where('so_id', $order->id)->where('status', 'draft')->update(['status' => 'pending_approval']);
@@ -1765,12 +1809,15 @@ public function checkVoucher()
               'status' => $newStatus,
               'signed_by_af_manager' => auth()->id(),
               'signed_at' => now(),
+              'approved_by_acct' => auth()->id(),
+              'acct_approved_at' => now(),
               'remarks' => ($order->remarks ? $order->remarks . ' | ' : '') . 'SI Signed & Approved in bulk by ' . auth()->user()->name
             ]);
 
-            if (in_array($order->type, ['area_consignment', 'area_sales_consignment', 'direct_consignment'])) {
-              \App\Models\SalesInvoice::where('so_id', $order->id)->whereIn('status', ['draft', 'pending_approval'])->update(['status' => 'approved']);
-            }
+            \App\Models\SalesInvoice::where('so_id', $order->id)->update([
+              'status' => 'approved',
+              'approved_by' => auth()->id()
+            ]);
 
             // Accounting integration
             $this->accounting->postSalesOrderEntry($order);
@@ -1937,7 +1984,9 @@ public function checkVoucher()
     $order->update([
       'status' => $newStatus,
       'signed_by_af_manager' => auth()->id(),
-      'signed_at' => now()
+      'signed_at' => now(),
+      'approved_by_acct' => auth()->id(),
+      'acct_approved_at' => now(),
     ]);
 
     $siNumberVal = $order->si_number ?: ($request->input('si_number') ?: 'SI-' . $order->so_number);
@@ -1950,10 +1999,16 @@ public function checkVoucher()
         'customer_name' => $order->customer->customer_name ?? 'N/A',
         'total_amount' => $order->total_amount,
         'transaction_type' => $order->type . '_si',
-        'created_by' => auth()->id()
+        'created_by' => $order->si_prepared_by ?: auth()->id()
       ]
     );
-    $si->update(['si_number' => $siNumberVal, 'status' => 'approved', 'posted_at' => now(), 'payment_method' => $order->payment_method ?? 'cash']);
+    $si->update([
+      'si_number' => $siNumberVal,
+      'status' => 'approved',
+      'posted_at' => now(),
+      'approved_by' => auth()->id(),
+      'payment_method' => $order->payment_method ?? 'cash'
+    ]);
 
     // --- ACCOUNTING INTEGRATION ---
     $this->accounting->postSalesOrderEntry($order);
@@ -2029,7 +2084,7 @@ public function checkVoucher()
 
   public function printSalesInvoice($id)
   {
-    $order = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bundle', 'items.product', 'preparedBy', 'mktApprovedBy', 'prodApprovedBy', 'siPreparedBy', 'signedBy'])->findOrFail($id);
+    $order = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bundle', 'items.product', 'preparedBy', 'mktApprovedBy', 'prodApprovedBy', 'siPreparedBy', 'signedBy', 'acctApprovedBy', 'invoices.createdBy', 'invoices.approvedBy'])->findOrFail($id);
 
     return view('marketing.sales-orders.print-invoice', [
       'order' => $order
@@ -2129,7 +2184,7 @@ public function checkVoucher()
     }
 
     $idsArray = explode(',', $ids);
-    $orders = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bundle', 'items.product', 'preparedBy', 'mktApprovedBy', 'prodApprovedBy', 'siPreparedBy', 'signedBy'])
+    $orders = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bundle', 'items.product', 'preparedBy', 'mktApprovedBy', 'prodApprovedBy', 'siPreparedBy', 'signedBy', 'acctApprovedBy', 'invoices.createdBy', 'invoices.approvedBy'])
       ->whereIn('id', $idsArray)
       ->get();
 

@@ -114,8 +114,11 @@
                                 <tr>
                                     <td>
                                         <strong>{{ $order->so_number }}</strong>
-                                        @if($order->si_number)
-                                            <br><span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem; font-weight: 600;">SI: {{ $order->si_number }}</span>
+                                        @php
+                                            $orderSiNumber = $order->si_number ?: ($order->invoice?->si_number ?? \App\Models\SalesInvoice::where('so_id', $order->id)->value('si_number'));
+                                        @endphp
+                                        @if($orderSiNumber)
+                                            <br><span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem; font-weight: 600;">SI: {{ $orderSiNumber }}</span>
                                         @endif
                                     </td>
                                     <td>{{ $order->customer?->customer_name ?? 'Unknown Customer' }}</td>

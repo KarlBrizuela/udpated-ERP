@@ -68,6 +68,7 @@
     @php
         $sidebar = $sidebar ?? (request()->is('admin-finance*') ? 'admin-finance' : 'production');
         $drCreateRoute = $sidebar === 'admin-finance' ? 'admin-finance.accounting.delivery-receipt' : 'production.logistic.delivery-receipt';
+        $drBulkPrintRoute = $sidebar === 'admin-finance' ? 'admin-finance.accounting.delivery-receipt.bulk-print' : 'production.logistic.delivery-receipt.bulk-print';
 
         $user = auth()->user();
         $canPrep = $user && ($user->isSuperAdmin() || 
@@ -356,6 +357,9 @@
                                                 <a href="{{ route($drCreateRoute, $order->id) }}" class="btn btn-primary shadow btn-xs sharp" title="View/Create DR">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
+                                                <a href="{{ route($drBulkPrintRoute, ['ids' => $order->id, 'autoprint' => 1]) }}" target="_blank" class="btn btn-danger shadow btn-xs sharp text-white" title="Print DR">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
                                                 
                                                 @if(in_array($order->type, ['area_consignment', 'area_sales_consignment']))
                                                      <button type="button" class="btn btn-success shadow btn-xs sharp" title="Import Excel (Customer Name + Pick Qty)" data-bs-toggle="modal" data-bs-target="#importExcelModalDr{{ $order->id }}">
@@ -643,6 +647,9 @@
                                             <div class="d-flex gap-1">
                                                 <a href="{{ route($drCreateRoute, $order->id) }}" class="btn btn-primary shadow btn-xs sharp" title="View DR">
                                                     <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{{ route($drBulkPrintRoute, ['ids' => $order->id, 'autoprint' => 1]) }}" target="_blank" class="btn btn-danger shadow btn-xs sharp text-white" title="Print DR">
+                                                    <i class="fas fa-print"></i>
                                                 </a>
 
                                                 @if(in_array($order->type, ['area_consignment', 'area_sales_consignment']))

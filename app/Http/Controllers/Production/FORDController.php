@@ -1268,6 +1268,7 @@ class FORDController extends Controller
                   ->orWhere('destination_province', 'like', '%' . $search . '%')
                   ->orWhere('service_mode', 'like', '%' . $search . '%')
                   ->orWhere('forwarder', 'like', '%' . $search . '%')
+                  ->orWhere('terms', 'like', '%' . $search . '%')
                   ->orWhere('customer_representative', 'like', '%' . $search . '%')
                   ->orWhereHas('createdBy', function($u) use ($search) {
                       $u->where(function($sub) use ($search) {
@@ -1332,6 +1333,7 @@ class FORDController extends Controller
     {
         $quotation = \App\Models\FreightQuotation::with(['createdBy', 'respondedBy', 'salesOrder.items'])->findOrFail($id);
         $allBooks = \App\Models\Book::where('is_active', true)->orderBy('name')->get();
+        $products = (new \App\Http\Controllers\MarketingController)->getUnifiedProducts();
         
         return view('marketing.freight-quotations.show', [
             'title' => 'Freight Quotation: ' . $quotation->quote_number,
@@ -1339,11 +1341,19 @@ class FORDController extends Controller
             'sidebar' => 'production',
             'quotation' => $quotation,
             'allBooks' => $allBooks,
+            'products' => $products,
             'isFord' => true,
             'indexRoute' => 'production.ford.freight-quotation.index',
             'createSoRoute' => 'production.ford.freight-quotation.create-so-directly',
             'proceedSoRoute' => 'production.ford.freight-quotation.proceed-to-so',
         ]);
+    }
+
+    public function freightQuotationUpdate(Request $request, $id)
+    {
+        $quotation = \App\Models\FreightQuotation::findOrFail($id);
+        $fqCtrl = new \App\Http\Controllers\Marketing\FreightQuotationController();
+        return $fqCtrl->update($request, $quotation);
     }
 }
 

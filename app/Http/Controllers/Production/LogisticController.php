@@ -1318,16 +1318,108 @@ class LogisticController extends Controller
         ]);
     }
 
-    public function deliveryTracking()
+    public function deliveryTracking(Request $request)
     {
-        $deliveries = \App\Models\SalesOrder::with('customer')
+        $query = \App\Models\SalesOrder::with('customer')
             ->whereIn('status', ['ready_for_delivery', 'in_transit', 'completed'])
+            ->whereNotIn('type', ['calculator_pos', 'ecom_direct']);
+
+        // Search Filter (Ref Number, Customer Name, Driver, Plate Number, Address)
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function($q) use ($search) {
+                $q->where('so_number', 'like', "%{$search}%")
+                  ->orWhere('driver', 'like', "%{$search}%")
+                  ->orWhere('plate_number', 'like', "%{$search}%")
+                  ->orWhere('shipping_address', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($cq) use ($search) {
+                      $cq->where('customer_name', 'like', "%{$search}%")
+                         ->orWhere('company_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by Customer
+        if ($request->filled('customer_id')) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        // Filter by Driver
+        if ($request->filled('driver')) {
+            if ($request->driver === 'unassigned') {
+                $query->where(function($q) {
+                    $q->whereNull('driver')->orWhere('driver', '');
+                });
+            } else {
+                $query->where('driver', $request->driver);
+            }
+        }
+
+        // Filter by Date (single date or range)
+        if ($request->filled('date')) {
+            $date = $request->date;
+            $query->where(function($q) use ($date) {
+                $q->whereDate('delivery_date', $date)
+                  ->orWhere(function($sub) use ($date) {
+                      $sub->whereNull('delivery_date')
+                          ->where(function($dSub) use ($date) {
+                              $dSub->whereDate('updated_at', $date)
+                                   ->orWhereDate('created_at', $date);
+                          });
+                  });
+            });
+        } elseif ($request->filled('start_date') || $request->filled('end_date')) {
+            if ($request->filled('start_date')) {
+                $startDate = $request->start_date;
+                $query->where(function($q) use ($startDate) {
+                    $q->whereDate('delivery_date', '>=', $startDate)
+                      ->orWhere(function($sub) use ($startDate) {
+                          $sub->whereNull('delivery_date')->whereDate('updated_at', '>=', $startDate);
+                      });
+                });
+            }
+            if ($request->filled('end_date')) {
+                $endDate = $request->end_date;
+                $query->where(function($q) use ($endDate) {
+                    $q->whereDate('delivery_date', '<=', $endDate)
+                      ->orWhere(function($sub) use ($endDate) {
+                          $sub->whereNull('delivery_date')->whereDate('updated_at', '<=', $endDate);
+                      });
+                });
+            }
+        }
+
+        $deliveries = $query->latest()->get();
+
+        // Distinct Customers with orders
+        $orderCustomerIds = \App\Models\SalesOrder::whereIn('status', ['ready_for_delivery', 'in_transit', 'completed'])
             ->whereNotIn('type', ['calculator_pos', 'ecom_direct'])
-            ->latest()
-            ->get();
+            ->whereNotNull('customer_id')
+            ->distinct()
+            ->pluck('customer_id');
+        $customers = \App\Models\Customer::whereIn('customer_id', $orderCustomerIds)
+            ->orderBy('customer_name')
+            ->get(['customer_id', 'customer_name', 'company_name']);
+        if ($customers->isEmpty()) {
+            $customers = \App\Models\Customer::orderBy('customer_name')->limit(100)->get(['customer_id', 'customer_name', 'company_name']);
+        }
+
+        // Distinct Drivers from user accounts and sales orders
+        $userDrivers = \App\Models\User::where('position', 'Driver')
+            ->where('status', true)
+            ->get()
+            ->map(fn($u) => trim($u->first_name . ' ' . $u->last_name));
+        $soDrivers = \App\Models\SalesOrder::whereIn('status', ['ready_for_delivery', 'in_transit', 'completed'])
+            ->whereNotNull('driver')
+            ->where('driver', '!=', '')
+            ->distinct()
+            ->pluck('driver');
+        $drivers = $userDrivers->merge($soDrivers)->unique()->filter()->sort()->values();
 
         return view('production.logistic.delivery-tracking', [
             'deliveries' => $deliveries,
+            'customers' => $customers,
+            'drivers' => $drivers,
             'title' => 'Delivery Tracking',
             'role' => 'Dispatcher',
             'sidebar' => 'production'
@@ -1721,7 +1813,7 @@ class LogisticController extends Controller
 
     public function bulkPrintDR(Request $request)
     {
-        $ids = $request->input('ids', []);
+        $ids = $request->input('ids', $request->input('id', []));
         if (is_string($ids)) {
             $ids = explode(',', $ids);
         }
@@ -1731,7 +1823,20 @@ class LogisticController extends Controller
             return redirect()->back()->with('error', 'No Delivery Receipts selected for bulk printing.');
         }
 
-        $orders = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.product', 'preparedBy', 'drPreparedBy', 'signedBy', 'acctApprovedBy', 'mktApprovedBy'])
+        $orders = \App\Models\SalesOrder::with([
+            'customer', 
+            'items.book', 
+            'items.product', 
+            'items.bundle',
+            'items.bookIndex',
+            'items.pickListItems',
+            'preparedBy', 
+            'drPreparedBy', 
+            'drApprovedBy',
+            'signedBy', 
+            'acctApprovedBy', 
+            'mktApprovedBy'
+        ])
             ->whereIn('id', $ids)
             ->get();
 
@@ -1740,10 +1845,13 @@ class LogisticController extends Controller
             ->get()
             ->keyBy('so_id');
 
+        $isSingle = $orders->count() === 1;
+        $title = $isSingle ? 'Delivery Receipt - ' . $orders->first()->so_number : 'Bulk Print Delivery Receipts';
+
         return view('production.logistic.bulk-print-dr', [
             'orders' => $orders,
             'deliveryReceiptsMap' => $deliveryReceiptsMap,
-            'title' => 'Bulk Print Delivery Receipts'
+            'title' => $title
         ]);
     }
 
@@ -3181,6 +3289,7 @@ class LogisticController extends Controller
                 'quote_number' => 'required|string|max:255|unique:freight_quotations,quote_number',
                 'quote_date' => 'required|date_format:Y-m-d',
                 'validity_days' => 'required|integer|min:1|max:365',
+                'terms' => 'nullable|string|max:255',
                 'origin_contact' => 'nullable|string|max:255',
                 'origin_address' => 'nullable|string',
                 'origin_province' => 'nullable|string|max:255',
@@ -3240,6 +3349,7 @@ class LogisticController extends Controller
                 'quote_number' => $validated['quote_number'],
                 'quote_date' => $validated['quote_date'],
                 'validity_days' => $validated['validity_days'],
+                'terms' => $request->input('terms'),
                 'origin_contact' => $validated['origin_contact'] ?? null,
                 'origin_address' => $validated['origin_address'] ?? null,
                 'origin_province' => $validated['origin_province'] ?? null,

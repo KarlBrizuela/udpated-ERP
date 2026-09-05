@@ -9,6 +9,9 @@
                     <div class="card-body">
                         <form id="freightQuotationForm" method="POST" action="{{ $storeRoute ?? route('marketing.freight-quotations.store') }}">
                             @csrf
+                            @if(!empty($isFord))
+                                <input type="hidden" name="source" value="ford">
+                            @endif
 
                             <!-- Customer Selection Section -->
                             <h6 class="border-bottom pb-2 mb-3"><strong>Customer Information</strong></h6>
@@ -26,6 +29,7 @@
                                                     data-address="{{ $customer->shipping_address ?? $customer->billing_address ?? '' }}"
                                                     data-province="{{ $customer->province ?? $customer->city_municipality ?? '' }}"
                                                     data-phone="{{ $customer->main_phone ?? $customer->mobile ?? '' }}"
+                                                    data-terms="{{ $customer->payment_terms ?? $customer->terms ?? '' }}"
                                                     {{ old('customer_id') == $customer->customer_id ? 'selected' : '' }}>
                                                 {{ $customer->customer_name }}
                                             </option>
@@ -39,7 +43,7 @@
                                         <option value="">Select Representative...</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label">Transaction Type:</label>
                                     <select class="form-control @error('transaction_type') is-invalid @enderror" name="transaction_type" id="fqTransactionType" required>
                                         <option value="paid" {{ old('transaction_type', 'paid') === 'paid' ? 'selected' : '' }}>Paid Transaction</option>
@@ -47,18 +51,25 @@
                                         <option value="area_consignment" {{ old('transaction_type') === 'area_consignment' ? 'selected' : '' }}>Area Consignment</option>
                                         <option value="area_sales_consignment" {{ old('transaction_type') === 'area_sales_consignment' ? 'selected' : '' }}>Area Sales Consignment</option>
                                         <option value="direct_consignment" {{ old('transaction_type') === 'direct_consignment' ? 'selected' : '' }}>Direct Consignment</option>
-                                        <option value="foreign" {{ old('transaction_type') === 'foreign' ? 'selected' : '' }}>Foreign Order</option>
+                                        <option value="foreign" {{ (old('transaction_type') === 'foreign' || !empty($isFord)) ? 'selected' : '' }}>Foreign Order</option>
                                         <option value="complimentary" {{ old('transaction_type') === 'complimentary' ? 'selected' : '' }}>Complimentary</option>
                                         <option value="cod" {{ old('transaction_type') === 'cod' ? 'selected' : '' }}>Due on Receipt (COD)</option>
                                         <option value="evaluation" {{ old('transaction_type') === 'evaluation' ? 'selected' : '' }}>Evaluation</option>
                                     </select>
                                     @error('transaction_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
+                                    <label class="form-label">Terms:</label>
+                                    <input type="text" class="form-control @error('terms') is-invalid @enderror" 
+                                           name="terms" id="fqTermsInput" placeholder="e.g. 30 Days, COD" 
+                                           value="{{ old('terms') }}">
+                                    @error('terms')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Currency:</label>
                                     <select class="form-control @error('currency') is-invalid @enderror" name="currency" id="fqCurrencySelect" required>
-                                         <option value="PHP" {{ old('currency', 'PHP') === 'PHP' ? 'selected' : '' }}>PHP (₱)</option>
-                                         <option value="USD" {{ old('currency') === 'USD' ? 'selected' : '' }}>USD ($)</option>
+                                         <option value="PHP" {{ old('currency', !empty($isFord) ? 'USD' : 'PHP') === 'PHP' ? 'selected' : '' }}>PHP (₱)</option>
+                                         <option value="USD" {{ old('currency', !empty($isFord) ? 'USD' : 'PHP') === 'USD' ? 'selected' : '' }}>USD ($)</option>
                                      </select>
                                     @error('currency')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
@@ -242,7 +253,10 @@
 
                             <!-- Action Buttons -->
                             <div class="form-actions mt-4 pt-3 border-top">
-                                <a href="{{ route('marketing.freight-quotations.list') }}" class="btn btn-secondary">Cancel</a>
+                                @php
+                                    $cancelUrl = !empty($isFord) ? route('production.ford.freight-quotation.index') : route('marketing.freight-quotations.list');
+                                @endphp
+                                <a href="{{ $cancelUrl }}" class="btn btn-secondary">Cancel</a>
                                 <button type="submit" class="btn btn-danger">
                                     <i class="fas fa-check me-1"></i>Submit for Logistics Review
                                 </button>
@@ -543,6 +557,7 @@
             // Customer Select & Auto-fill Logic
             const fqCustomerSelect = document.getElementById('fqCustomerSelect');
             const fqRepresentativeSelect = document.getElementById('fqRepresentativeSelect');
+            const fqTermsInput = document.getElementById('fqTermsInput');
             const toggleAutofillBtn = document.getElementById('toggleAutofillBtn');
 
             const originContact = document.querySelector('input[name="origin_contact"]');
@@ -599,15 +614,38 @@
                 if (destinationContact) destinationContact.value = destContactStr;
                 if (destinationProvince) destinationProvince.value = province;
                 if (destinationAddress) destinationAddress.value = address;
+
+                const custTerms = opt.getAttribute('data-terms') || '';
+                if (fqTermsInput && custTerms && !fqTermsInput.value) {
+                    fqTermsInput.value = custTerms;
+                    fqTermsInput.dataset.autofilled = 'true';
+                }
             }
 
             if (fqCustomerSelect) {
-                fqCustomerSelect.addEventListener('change', function() {
-                    const option = this.options[this.selectedIndex];
+                const handleCustomerChange = function() {
+                    const option = fqCustomerSelect.options[fqCustomerSelect.selectedIndex];
+                    if (!option) return;
                     populateRepresentatives(option);
+                    const custTerms = option.getAttribute('data-terms');
+                    if (custTerms && fqTermsInput && (!fqTermsInput.value || fqTermsInput.dataset.autofilled === 'true')) {
+                        fqTermsInput.value = custTerms;
+                        fqTermsInput.dataset.autofilled = 'true';
+                    }
                     if (isAutofillEnabled) {
                         performAutofill();
                     }
+                };
+
+                fqCustomerSelect.addEventListener('change', handleCustomerChange);
+                if (window.jQuery) {
+                    $(fqCustomerSelect).on('changed.bs.select', handleCustomerChange);
+                }
+            }
+
+            if (fqTermsInput) {
+                fqTermsInput.addEventListener('input', function() {
+                    delete this.dataset.autofilled;
                 });
             }
 
@@ -617,6 +655,9 @@
                 fqTransactionType.addEventListener('change', function() {
                     if (this.value === 'foreign') {
                         fqCurrencySelect.value = 'USD';
+                    }
+                    if (this.value === 'cod' && fqTermsInput && !fqTermsInput.value) {
+                        fqTermsInput.value = 'COD';
                     }
                 });
             }

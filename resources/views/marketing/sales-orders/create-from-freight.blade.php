@@ -78,7 +78,7 @@
                             <h6 class="border-bottom pb-2 mb-3"><strong>Customer Information</strong></h6>
 
                             <div class="row mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-5">
                                     <label class="form-label">Customer:</label>
                                     <select class="form-control @error('customer_id') is-invalid @enderror" name="customer_id" id="customerSelect" required>
                                         <option value="" selected disabled>Select Customer...</option>
@@ -90,7 +90,7 @@
                                     </select>
                                     @error('customer_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Transaction Type:</label>
                                     <select class="form-control @error('type') is-invalid @enderror" name="type" required>
                                         <option value="" disabled>Select Type</option>
@@ -104,6 +104,25 @@
                                         <option value="evaluation" {{ old('type') === 'evaluation' ? 'selected' : '' }}>Evaluation</option>
                                     </select>
                                     @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Terms:</label>
+                                    <input type="text" class="form-control @error('terms') is-invalid @enderror" name="terms" placeholder="e.g. 30 Days" value="{{ old('terms', $quotation->terms ?? '') }}">
+                                    @error('terms')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Proof of Payment <span class="badge bg-secondary text-white ms-1">Optional</span>:</label>
+                                    <input type="file" class="form-control form-control-sm @error('proof_of_payment') is-invalid @enderror" name="proof_of_payment" accept=".pdf,.jpg,.jpeg,.png">
+                                    <small class="text-muted d-block mt-1">Accepted formats: PDF, JPG, JPEG, PNG (Max: 10MB)</small>
+                                    @if($quotation->proof_of_payment)
+                                        <div class="mt-1">
+                                            <small class="text-success"><i class="bi bi-paperclip me-1"></i>Current attachment on quotation: <a href="{{ asset('storage/' . $quotation->proof_of_payment) }}" target="_blank" class="fw-bold text-success">{{ basename($quotation->proof_of_payment) }}</a> (Will be inherited if no new file uploaded)</small>
+                                        </div>
+                                    @endif
+                                    @error('proof_of_payment')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                             </div>
 

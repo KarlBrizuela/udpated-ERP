@@ -46,6 +46,7 @@ class FreightQuotationController extends Controller
                   ->orWhere('destination_province', 'like', '%' . $search . '%')
                   ->orWhere('service_mode', 'like', '%' . $search . '%')
                   ->orWhere('forwarder', 'like', '%' . $search . '%')
+                  ->orWhere('terms', 'like', '%' . $search . '%')
                   ->orWhere('customer_representative', 'like', '%' . $search . '%')
                   ->orWhereHas('createdBy', function($u) use ($search) {
                       $u->where(function($sub) use ($search) {
@@ -102,6 +103,7 @@ class FreightQuotationController extends Controller
             $validated = $request->validate([
                 'customer_id' => 'required|exists:customers,customer_id',
                 'transaction_type' => 'nullable|string|max:50',
+                'terms' => 'nullable|string|max:255',
                 'origin_contact' => 'required|string|max:255',
                 'origin_address' => 'required|string',
                 'origin_province' => 'required|string|max:255',
@@ -174,6 +176,7 @@ class FreightQuotationController extends Controller
                 'customer_id' => $validated['customer_id'],
                 'customer_representative' => $request->customer_representative,
                 'transaction_type' => $validated['transaction_type'] ?? 'paid',
+                'terms' => $request->input('terms'),
                 'origin_contact' => $validated['origin_contact'],
                 'origin_address' => $validated['origin_address'],
                 'origin_province' => $validated['origin_province'],
@@ -248,6 +251,7 @@ class FreightQuotationController extends Controller
                         'billing_address' => $validated['destination_address'] ?? null,
                         'so_number' => $soNumber,
                         'type' => $soType,
+                        'terms' => $request->input('terms'),
                         'currency' => $validated['currency'] ?? ($quotation->currency ?? 'PHP'),
                         'status' => 'draft',
                         'total_amount' => $itemsTotal,
@@ -330,6 +334,7 @@ class FreightQuotationController extends Controller
         $allBooks = Book::where('is_active', true)
             ->orderBy('name')
             ->get();
+        $products = (new \App\Http\Controllers\MarketingController)->getUnifiedProducts();
 
         return view('marketing.freight-quotations.show', [
             'title' => 'Freight Quotation Details',
@@ -337,13 +342,14 @@ class FreightQuotationController extends Controller
             'sidebar' => 'marketing',
             'quotation' => $freightQuotation,
             'allBooks' => $allBooks,
+            'products' => $products,
         ]);
     }
 
     /**
      * Create sales order directly from approved freight quotation
      */
-    public function createSalesOrderFromApprovedQuotation(FreightQuotation $freightQuotation)
+    public function createSalesOrderFromApprovedQuotation(Request $request, FreightQuotation $freightQuotation)
     {
         try {
             // Check authorization
@@ -395,6 +401,15 @@ class FreightQuotationController extends Controller
                 }
             }
 
+            $proofOfPaymentPath = $freightQuotation->proof_of_payment;
+            if ($request->hasFile('proof_of_payment')) {
+                $request->validate([
+                    'proof_of_payment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                ]);
+                $proofOfPaymentPath = $request->file('proof_of_payment')->store('sales_orders/proof_of_payments', 'public');
+                $freightQuotation->update(['proof_of_payment' => $proofOfPaymentPath]);
+            }
+
             $salesOrder = SalesOrder::create([
                 'customer_id' => $freightQuotation->customer_id ?? $customer?->customer_id,
                 'customer_representative' => $freightQuotation->customer_representative ?? null,
@@ -403,6 +418,7 @@ class FreightQuotationController extends Controller
                 'billing_address' => $freightQuotation->destination_address ?? $customer?->shipping_address ?? $customer?->billing_address ?? '',
                 'so_number' => $soNumber,
                 'type' => $soType,
+                'terms' => $freightQuotation->terms ?? null,
                 'currency' => $freightQuotation->currency ?? 'PHP',
                 'status' => 'pending_mkt_approval',
                 'total_amount' => $freightQuotation->total_amount + $serviceFee,
@@ -410,6 +426,7 @@ class FreightQuotationController extends Controller
                 'freight_notes' => $freightQuotation->logistics_notes ?? 'Freight approved from Quotation #' . $freightQuotation->quote_number,
                 'freight_option' => $freightQuotation->freight_option,
                 'forwarder' => $freightQuotation->forwarder ?? $freightQuotation->freight_mode ?? null,
+                'proof_of_payment' => $proofOfPaymentPath,
                 'prepared_by' => auth()->id(),
                 'remarks' => 'Created from Freight Quotation #' . $freightQuotation->quote_number,
             ]);
@@ -497,6 +514,8 @@ class FreightQuotationController extends Controller
             $validated = $request->validate([
                 'customer_id' => 'required|exists:customers,customer_id',
                 'type' => 'required|in:paid,charge,area_consignment,direct_consignment,foreign,complimentary,cod,evaluation',
+                'terms' => 'nullable|string|max:255',
+                'proof_of_payment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
                 'items' => 'required|array',
                 'items.*.product_id' => 'required|exists:books,id',
                 'items.*.quantity' => 'required|integer|min:1',
@@ -552,6 +571,12 @@ class FreightQuotationController extends Controller
                     $totalAmount += $serviceFee;
                 }
 
+                $proofOfPaymentPath = $freightQuotation->proof_of_payment;
+                if ($request->hasFile('proof_of_payment')) {
+                    $proofOfPaymentPath = $request->file('proof_of_payment')->store('sales_orders/proof_of_payments', 'public');
+                    $freightQuotation->update(['proof_of_payment' => $proofOfPaymentPath]);
+                }
+
                 $salesOrder = SalesOrder::create([
                     'customer_id' => $validated['customer_id'],
                     'customer_representative' => $freightQuotation->customer_representative ?? null,
@@ -560,12 +585,14 @@ class FreightQuotationController extends Controller
                     'billing_address' => $freightQuotation->destination_address ?? null,
                     'so_number' => $soNumber,
                     'type' => $soType,
+                    'terms' => $request->input('terms', $freightQuotation->terms ?? null),
                     'currency' => $freightQuotation->currency ?? 'PHP',
                     'status' => 'draft',
                     'total_amount' => $totalAmount,
                     'freight_charges' => $freightQuotation->total_amount,
                     'freight_option' => $freightQuotation->freight_option,
                     'forwarder' => $freightQuotation->forwarder ?? $freightQuotation->freight_mode ?? null,
+                    'proof_of_payment' => $proofOfPaymentPath,
                     'prepared_by' => auth()->id(),
                     'remarks' => 'Created from Freight Quotation #' . $freightQuotation->quote_number,
                 ]);
@@ -660,6 +687,283 @@ class FreightQuotationController extends Controller
         } catch (\Exception $e) {
             Log::error('Error deleting freight quotation: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while deleting the freight quotation.');
+        }
+    }
+
+    /**
+     * Upload or update proof of payment for a freight quotation
+     */
+    public function uploadProofOfPayment(Request $request, FreightQuotation $freightQuotation)
+    {
+        try {
+            $request->validate([
+                'proof_of_payment' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            ], [
+                'proof_of_payment.required' => 'Please select a file to upload.',
+                'proof_of_payment.mimes' => 'The file must be a PDF, JPG, JPEG, or PNG.',
+                'proof_of_payment.max' => 'The file size must not exceed 10MB.',
+            ]);
+
+            $path = $request->file('proof_of_payment')->store('sales_orders/proof_of_payments', 'public');
+
+            $freightQuotation->update([
+                'proof_of_payment' => $path,
+            ]);
+
+            // If a Sales Order is already linked, sync the proof of payment to the SO as well
+            if ($freightQuotation->sales_order_id && $freightQuotation->salesOrder) {
+                $freightQuotation->salesOrder->update([
+                    'proof_of_payment' => $path,
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Proof of payment uploaded successfully.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            Log::error('Error uploading proof of payment for freight quotation: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to upload proof of payment: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update the entire freight quotation (details, cargo items, freight charges, SO items)
+     */
+    public function update(Request $request, FreightQuotation $freightQuotation)
+    {
+        try {
+            $request->validate([
+                'customer_representative' => 'nullable|string|max:255',
+                'terms' => 'nullable|string|max:255',
+                'origin_contact' => 'nullable|string|max:255',
+                'origin_province' => 'nullable|string|max:255',
+                'origin_address' => 'nullable|string',
+                'destination_contact' => 'nullable|string|max:255',
+                'destination_province' => 'nullable|string|max:255',
+                'destination_address' => 'nullable|string',
+                'service_mode' => 'nullable|string|max:255',
+                'forwarder' => 'nullable|string|max:255',
+                'freight_option' => 'nullable|string|in:freight_collect,freight_billing,bill_client',
+                'currency' => 'nullable|string|in:PHP,USD,EUR',
+                'boxes_count' => 'nullable|integer|min:0',
+                'estimated_freight' => 'nullable|numeric|min:0',
+                'handling_fee' => 'nullable|numeric|min:0',
+                'total_amount' => 'nullable|numeric|min:0',
+                'logistics_notes' => 'nullable|string',
+                'proof_of_payment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                'cargo_qty' => 'nullable|array',
+                'cargo_qty.*' => 'nullable|integer|min:0',
+                'cargo_package_type' => 'nullable|array',
+                'cargo_dimensions' => 'nullable|array',
+                'so_item_qty' => 'nullable|array',
+                'so_item_price' => 'nullable|array',
+                'so_item_discount' => 'nullable|array',
+                'so_item_discount_type' => 'nullable|array',
+            ]);
+
+            DB::beginTransaction();
+
+            // 1. Process Cargo Items
+            $cargoItems = [];
+            if ($request->has('cargo_qty') && is_array($request->cargo_qty)) {
+                foreach ($request->cargo_qty as $index => $qty) {
+                    $pkgType = trim($request->cargo_package_type[$index] ?? '');
+                    $dims = trim($request->cargo_dimensions[$index] ?? '');
+                    if (!empty($qty) || !empty($pkgType) || !empty($dims)) {
+                        $cargoItems[] = [
+                            'qty' => (int) ($qty ?? 1),
+                            'package_type' => $pkgType ?: 'Box',
+                            'dimensions' => $dims ?: null,
+                        ];
+                    }
+                }
+            }
+
+            // 2. Process Freight Charges
+            $estimatedFreight = $request->has('estimated_freight') && $request->input('estimated_freight') !== null
+                ? (float) $request->input('estimated_freight')
+                : (float) $freightQuotation->estimated_freight;
+
+            $handlingFee = $request->has('handling_fee') && $request->input('handling_fee') !== null
+                ? (float) $request->input('handling_fee')
+                : (float) $freightQuotation->handling_fee;
+
+            $totalFreight = $estimatedFreight + $handlingFee;
+            if ($request->has('total_amount') && $request->input('total_amount') !== null && (float)$request->input('total_amount') > 0) {
+                $totalFreight = (float) $request->input('total_amount');
+            }
+
+            // 3. Process Proof of Payment (if newly uploaded)
+            $popPath = $freightQuotation->proof_of_payment;
+            if ($request->hasFile('proof_of_payment')) {
+                $popPath = $request->file('proof_of_payment')->store('sales_orders/proof_of_payments', 'public');
+            }
+
+            // 4. Update Freight Quotation
+            $freightQuotationData = [
+                'customer_representative' => $request->input('customer_representative', $freightQuotation->customer_representative),
+                'terms' => $request->input('terms', $freightQuotation->terms),
+                'origin_contact' => $request->input('origin_contact', $freightQuotation->origin_contact),
+                'origin_province' => $request->input('origin_province', $freightQuotation->origin_province),
+                'origin_address' => $request->input('origin_address', $freightQuotation->origin_address),
+                'destination_contact' => $request->input('destination_contact', $freightQuotation->destination_contact),
+                'destination_province' => $request->input('destination_province', $freightQuotation->destination_province),
+                'destination_address' => $request->input('destination_address', $freightQuotation->destination_address),
+                'service_mode' => $request->input('service_mode', $freightQuotation->service_mode),
+                'forwarder' => $request->input('forwarder', $freightQuotation->forwarder),
+                'freight_mode' => $request->input('forwarder', $freightQuotation->forwarder),
+                'freight_option' => $request->input('freight_option', $freightQuotation->freight_option),
+                'currency' => $request->input('currency', $freightQuotation->currency ?? 'PHP'),
+                'boxes_count' => $request->has('boxes_count') ? (int)$request->input('boxes_count') : $freightQuotation->boxes_count,
+                'estimated_freight' => $estimatedFreight,
+                'handling_fee' => $handlingFee,
+                'total_amount' => $totalFreight,
+                'logistics_notes' => $request->input('logistics_notes', $freightQuotation->logistics_notes),
+                'proof_of_payment' => $popPath,
+            ];
+
+            if ($request->has('cargo_qty')) {
+                $freightQuotationData['cargo_items'] = !empty($cargoItems) ? json_encode($cargoItems) : null;
+            }
+
+            $freightQuotation->update($freightQuotationData);
+
+            // 5. Update or Create linked Sales Order and its items
+            $marketingCtrl = new \App\Http\Controllers\MarketingController();
+            $soItemsInput = $request->input('so_items', []);
+
+            // If salesOrder doesn't exist yet but user added items
+            if (!$freightQuotation->sales_order_id && !empty($soItemsInput) && is_array($soItemsInput)) {
+                $isFordQuotation = $freightQuotation->source === 'ford' || str_starts_with($freightQuotation->quote_number, 'FRQ-FORD-');
+                $soNumber = $isFordQuotation ? ('FORD-SO-' . date('Ymd') . '-' . rand(1000, 9999)) : ('SO-' . date('Y') . '-' . str_pad(\App\Models\SalesOrder::whereYear('created_at', date('Y'))->count() + 1, 4, '0', STR_PAD_LEFT));
+                $soType = $isFordQuotation ? 'foreign' : ($freightQuotation->transaction_type ?? 'paid');
+
+                $salesOrder = \App\Models\SalesOrder::create([
+                    'customer_id' => $freightQuotation->customer_id,
+                    'customer_representative' => $freightQuotation->customer_representative,
+                    'customer_contact' => $freightQuotation->destination_contact,
+                    'shipping_address' => $freightQuotation->destination_address,
+                    'billing_address' => $freightQuotation->destination_address,
+                    'so_number' => $soNumber,
+                    'type' => $soType,
+                    'terms' => $freightQuotation->terms,
+                    'currency' => $freightQuotation->currency ?? 'PHP',
+                    'status' => 'draft',
+                    'total_amount' => 0,
+                    'freight_option' => $freightQuotation->freight_option,
+                    'forwarder' => $freightQuotation->forwarder,
+                    'freight_charges' => $totalFreight,
+                    'proof_of_payment' => $popPath,
+                    'prepared_by' => auth()->id(),
+                    'remarks' => 'Created from Freight Quotation #' . $freightQuotation->quote_number,
+                ]);
+                $freightQuotation->update(['sales_order_id' => $salesOrder->id]);
+            } else {
+                $salesOrder = $freightQuotation->salesOrder;
+            }
+
+            if ($salesOrder) {
+                $soUpdate = [
+                    'customer_representative' => $freightQuotation->customer_representative,
+                    'customer_contact' => $freightQuotation->destination_contact,
+                    'shipping_address' => $freightQuotation->destination_address,
+                    'billing_address' => $freightQuotation->destination_address,
+                    'currency' => $freightQuotation->currency,
+                    'terms' => $freightQuotation->terms,
+                    'freight_option' => $freightQuotation->freight_option,
+                    'forwarder' => $freightQuotation->forwarder,
+                    'freight_charges' => $totalFreight,
+                    'proof_of_payment' => $popPath,
+                ];
+
+                if ($request->has('so_discount_value')) {
+                    $soUpdate['discount_value'] = (float)$request->input('so_discount_value', 0);
+                    $soUpdate['discount_type'] = $request->input('so_discount_type', 'percentage');
+                }
+
+                // If so_items array is submitted and order is editable
+                if ($request->has('so_items') && is_array($soItemsInput) && in_array($salesOrder->status, ['draft', 'pending_mkt_approval', 'pending_prod_approval'])) {
+                    $wasDeducted = (bool) $salesOrder->stock_deducted;
+                    if ($wasDeducted) {
+                        \App\Services\StockDeductionService::restoreForSalesOrder($salesOrder, 'Freight Quotation Items Edit');
+                    }
+
+                    $keptItemIds = [];
+                    foreach ($soItemsInput as $rowKey => $row) {
+                        $qty = max(1, (int)($row['quantity'] ?? 1));
+                        $price = max(0, (float)($row['price'] ?? 0));
+                        $discVal = max(0, (float)($row['discount_value'] ?? 0));
+                        $discType = $row['discount_type'] ?? 'percentage';
+                        $gross = $qty * $price;
+                        $discAmount = $discType === 'percentage' ? $gross * ($discVal / 100) : $discVal;
+                        $subtotal = max(0, $gross - $discAmount);
+
+                        if (!empty($row['id']) && $existingItem = $salesOrder->items()->find($row['id'])) {
+                            // Update existing item
+                            $existingItem->update([
+                                'quantity' => $qty,
+                                'price' => $price,
+                                'discount_value' => $discVal,
+                                'discount_type' => $discType,
+                                'discount_amount' => $discAmount,
+                                'subtotal' => $subtotal,
+                            ]);
+                            $keptItemIds[] = $existingItem->id;
+                        } elseif (!empty($row['product_id'])) {
+                            // Add newly created item
+                            $target = $marketingCtrl->resolveItemTarget($row['product_id']);
+                            $newItem = $salesOrder->items()->create([
+                                'book_id' => $target['book_id'],
+                                'bundle_id' => $target['bundle_id'],
+                                'book_index_id' => $target['book_index_id'],
+                                'quantity' => $qty,
+                                'price' => $price,
+                                'discount_value' => $discVal,
+                                'discount_type' => $discType,
+                                'discount_amount' => $discAmount,
+                                'subtotal' => $subtotal,
+                            ]);
+                            $keptItemIds[] = $newItem->id;
+                        }
+                    }
+
+                    // Delete items that were removed
+                    $salesOrder->items()->whereNotIn('id', $keptItemIds)->delete();
+
+                    if ($wasDeducted) {
+                        \App\Services\StockDeductionService::deductForSalesOrder($salesOrder);
+                    }
+                }
+
+                // Recalculate Sales Order total_amount
+                $itemsSubtotal = $salesOrder->items()->sum('subtotal');
+                $discVal = (float)($soUpdate['discount_value'] ?? ($salesOrder->discount_value ?? 0));
+                $discType = $soUpdate['discount_type'] ?? ($salesOrder->discount_type ?? 'percentage');
+                $orderDiscAmount = $discType === 'percentage' ? ($itemsSubtotal * ($discVal / 100)) : $discVal;
+                $soUpdate['discount_amount'] = $orderDiscAmount;
+
+                $soNetTotal = max(0, $itemsSubtotal - $orderDiscAmount);
+                $serviceFee = $freightQuotation->freight_option === 'freight_collect' ? 50.00 : 0;
+                if ($freightQuotation->currency === 'USD') {
+                    $serviceFee = $freightQuotation->freight_option === 'freight_collect' ? (50.00 / 56.0) : 0;
+                } elseif ($freightQuotation->currency === 'EUR') {
+                    $serviceFee = $freightQuotation->freight_option === 'freight_collect' ? (50.00 / 62.0) : 0;
+                }
+
+                $soUpdate['total_amount'] = $soNetTotal + $serviceFee;
+                $salesOrder->update($soUpdate);
+            }
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Freight Quotation #' . $freightQuotation->quote_number . ' and details updated successfully.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating freight quotation: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update freight quotation: ' . $e->getMessage())->withInput();
         }
     }
 }

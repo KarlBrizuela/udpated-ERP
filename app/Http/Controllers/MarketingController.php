@@ -1657,7 +1657,7 @@ class MarketingController extends Controller
     {
         $order = null;
         if ($id) {
-            $order = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bookIndex.book', 'items.bundle', 'items.pickListItems', 'preparedBy', 'areaSalesStaff'])->findOrFail($id);
+            $order = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bookIndex.book', 'items.bundle', 'items.pickListItems', 'preparedBy', 'areaSalesStaff', 'siPreparedBy', 'signedBy', 'acctApprovedBy', 'mktApprovedBy', 'prodApprovedBy', 'invoices.createdBy', 'invoices.approvedBy'])->findOrFail($id);
 
             // Fail-safe auto-heal: restore any items with 0 quantity from pick list or historical qty
             foreach ($order->items as $item) {
@@ -1726,7 +1726,7 @@ class MarketingController extends Controller
 
     public function printSalesInvoiceForm($id)
     {
-        $order = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bundle', 'preparedBy', 'mktApprovedBy', 'prodApprovedBy'])->findOrFail($id);
+        $order = \App\Models\SalesOrder::with(['customer', 'items.book', 'items.bundle', 'preparedBy', 'mktApprovedBy', 'prodApprovedBy', 'siPreparedBy', 'signedBy', 'acctApprovedBy', 'invoices.createdBy', 'invoices.approvedBy'])->findOrFail($id);
 
         return view('marketing.sales-orders.print-invoice', [
             'order' => $order
@@ -2370,6 +2370,22 @@ class MarketingController extends Controller
         ]);
 
 
+        // Handle optional proof of payment upload or inheritance from freight quotation
+        if ($request->hasFile('proof_of_payment')) {
+            $request->validate([
+                'proof_of_payment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            ]);
+            $popPath = $request->file('proof_of_payment')->store('sales_orders/proof_of_payments', 'public');
+            $so->update(['proof_of_payment' => $popPath]);
+            if ($so->freightQuotation) {
+                $so->freightQuotation->update(['proof_of_payment' => $popPath]);
+            }
+        } elseif (!$so->proof_of_payment && $so->freightQuotation && $so->freightQuotation->proof_of_payment) {
+            $so->update(['proof_of_payment' => $so->freightQuotation->proof_of_payment]);
+        } elseif ($so->proof_of_payment && $so->freightQuotation && !$so->freightQuotation->proof_of_payment) {
+            $so->freightQuotation->update(['proof_of_payment' => $so->proof_of_payment]);
+        }
+
         if ($so->freightQuotation) {
             $so->freightQuotation->update([
                 'workflow_status' => 'linked_to_so',
@@ -2908,6 +2924,7 @@ class MarketingController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('so_number', 'LIKE', "%{$search}%")
                   ->orWhere('platform_order_id', 'LIKE', "%{$search}%")
+                  ->orWhere('si_number', 'LIKE', "%{$search}%")
                   ->orWhere('remarks', 'LIKE', "%{$search}%")
                   ->orWhereHas('customer', function($cq) use ($search) {
                       $cq->where('customer_name', 'LIKE', "%{$search}%");
@@ -2929,6 +2946,15 @@ class MarketingController extends Controller
 
         $invoices = $query->latest()->paginate(10)->withQueryString();
 
+        $platformNextSi = [
+            'lazada' => \App\Http\Controllers\POSController::getNextSiNumber('lazada'),
+            'shopee' => \App\Http\Controllers\POSController::getNextSiNumber('shopee'),
+            'tiktok' => \App\Http\Controllers\POSController::getNextSiNumber('tiktok'),
+            'cob'    => \App\Http\Controllers\POSController::getNextSiNumber('cob'),
+        ];
+        $selectedPlatform = old('ecom_platform', 'lazada');
+        $nextSiNumber = $platformNextSi[$selectedPlatform] ?? \App\Http\Controllers\POSController::getNextSiNumber('ecom');
+
         return view('marketing.direct-invoice-ecom', [
             'title' => 'Direct Invoice (E-com)',
             'role' => auth()->user()->position ?? 'Marketing Staff',
@@ -2936,6 +2962,8 @@ class MarketingController extends Controller
             'customers' => $customers,
             'products' => $products,
             'invoices' => $invoices,
+            'nextSiNumber' => $nextSiNumber,
+            'platformNextSi' => $platformNextSi,
         ]);
     }
 
@@ -2943,6 +2971,7 @@ class MarketingController extends Controller
     {
         $validated = $request->validate([
             'customer_id' => 'nullable',
+            'si_number' => 'nullable|string|max:50',
             'ecom_platform' => 'required|in:lazada,shopee,tiktok,cob',
             'platform_order_id' => 'nullable|string|max:255',
             'items' => 'required|array|min:1|max:24',
@@ -3064,6 +3093,7 @@ class MarketingController extends Controller
         $so = \App\Models\SalesOrder::create([
             'customer_id' => $customerId,
             'so_number' => $invoiceNumber,
+            'si_number' => $request->filled('si_number') ? trim($request->input('si_number')) : null,
             'type' => 'ecom_direct',
             'ecom_platform' => $request->ecom_platform,
             'platform_order_id' => $request->platform_order_id,
@@ -3203,6 +3233,22 @@ class MarketingController extends Controller
             'total_amount' => $totalAmount,
             'status' => 'picking'
         ]);
+
+        if (!empty($so->si_number)) {
+            \App\Models\SalesInvoice::updateOrCreate(
+                ['so_id' => $so->id],
+                [
+                    'si_number'        => $so->si_number,
+                    'customer_id'      => $so->customer_id,
+                    'customer_name'    => $customer->customer_name ?? 'E-Com Customer',
+                    'total_amount'     => $totalAmount,
+                    'transaction_type' => 'ecom_direct_si',
+                    'payment_method'   => 'cash',
+                    'status'           => 'approved',
+                    'created_by'       => $so->prepared_by ?? auth()->id()
+                ]
+            );
+        }
 
         // Automatically create a pick list for Direct E-Com Invoice so it appears in E-Commerce Pick Lists
         try {

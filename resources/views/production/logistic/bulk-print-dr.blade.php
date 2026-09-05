@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Print Delivery Receipts</title>
+    <title>{{ $title ?? ($orders->count() === 1 ? 'Delivery Receipt - ' . $orders->first()->so_number : 'Bulk Print Delivery Receipts') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css">
     <style>
@@ -192,7 +192,6 @@
                 -webkit-print-color-adjust: exact !important;
                 color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                color: #000000 !important;
             }
             body {
                 background: #ffffff !important;
@@ -214,7 +213,6 @@
             }
             .receipt-table,
             .receipt-table td,
-            .receipt-table th,
             .receipt-table tfoot td,
             .receipt-table span,
             .receipt-table div {
@@ -224,12 +222,13 @@
                 background-color: #ffffff !important;
                 border-color: #000000 !important;
             }
-            .receipt-table th {
-                font-weight: 900 !important;
-                background: #ffffff !important;
-                background-color: #ffffff !important;
-                color: #000000 !important;
-                border: 1px solid #000000 !important;
+            .receipt-table thead th {
+                font-weight: 800 !important;
+                background-color: #ff0000 !important;
+                color: #ffffff !important;
+                border: 1px solid #ff0000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .receipt-table td {
                 font-weight: 700 !important;
@@ -328,10 +327,10 @@
             <a href="{{ route('production.logistic.delivery-receipt-list') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="las la-arrow-left me-1"></i> Back to Delivery Receipts
             </a>
-            <span class="fw-bold text-muted">{{ $orders->count() }} Delivery Receipt(s) Selected</span>
+            <span class="fw-bold text-muted">{{ $orders->count() }} Delivery Receipt{{ $orders->count() > 1 ? 's' : '' }} Selected</span>
         </div>
         <button onclick="window.print()" class="btn btn-danger btn-sm px-4 shadow-sm" style="background:#ff0000; border-color:#ff0000;">
-            <i class="las la-print me-1"></i> Print All Receipts
+            <i class="las la-print me-1"></i> {{ $orders->count() > 1 ? 'Print All Receipts' : 'Print Receipt' }}
         </button>
     </div>
 
@@ -385,13 +384,20 @@
         $approvedByName = 'Pending Approval';
         if ($order->drPreparedBy) {
             $preparedByName = $order->drPreparedBy->name;
-            $approvedByName = $order->drPreparedBy->name;
         } elseif ($order->preparedBy) {
             $preparedByName = $order->preparedBy->name;
         }
-        if (!$approvedByName || $approvedByName === 'Pending Approval') {
-            $approvedByName = $order->signedBy->name ?? ($order->acctApprovedBy->name ?? ($order->mktApprovedBy->name ?? 'Pending Approval'));
+
+        if ($order->drApprovedBy) {
+            $approvedByName = $order->drApprovedBy->name;
+        } elseif ($order->signedBy) {
+            $approvedByName = $order->signedBy->name;
+        } elseif ($order->acctApprovedBy) {
+            $approvedByName = $order->acctApprovedBy->name;
+        } elseif ($order->mktApprovedBy) {
+            $approvedByName = $order->mktApprovedBy->name;
         }
+
         $receivedByName = $bCompany?->company_name ?: ($order->customer_representative ?: ($order->customer->customer_name ?? ''));
         $dateFormatted = $order->dr_prepared_at ? \Carbon\Carbon::parse($order->dr_prepared_at)->format('M d, Y') : ($order->created_at ? $order->created_at->format('M d, Y') : date('M d, Y'));
 
@@ -435,7 +441,7 @@
         <table class="form-info-grid">
             <tr>
                 <td class="label-col">DR No.:</td>
-                <td class="val-col" style="width: 35%;">DR-{{ $order->so_number }}</td>
+                <td class="val-col" style="width: 35%;">{{ $deliveryReceipt?->dr_number ?: 'DR-' . $order->so_number }}</td>
                 <td class="label-col" style="padding-left: 15px;">Date:</td>
                 <td class="val-col">{{ $dateFormatted }}</td>
             </tr>
@@ -563,6 +569,9 @@
                         <td style="text-align: center;">{{ $unit }}</td>
                         <td style="font-weight: 600;">
                             {{ $item->bookIndex?->display_name ?? ($item->bookIndex?->title ?? ($item->bookIndex?->custom_name ?? ($item->bookIndex?->book?->name ?? ($item->book?->name ?? ($item->bundle?->name ?? ($item->product?->name ?? ($item->item_name ?? ($item->product_name ?? 'Unknown Item')))))))) }}
+                            @if($item->bookIndex || !empty($item->book_index_id))
+                                <span class="badge border border-dark text-dark ms-1" style="font-size: 9px; padding: 1px 5px; vertical-align: middle; border-radius: 4px;">Index</span>
+                            @endif
                             @if($isNBS && !empty($articleNo))
                                 <div style="font-size: 11px; font-weight: bold; color: #000; margin-top: 2px;">
                                     Article #: {{ $articleNo }}

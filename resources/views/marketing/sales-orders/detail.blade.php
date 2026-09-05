@@ -202,6 +202,16 @@
                                 <td class="fw-bold text-dark">REF #:</td>
                                 <td class="text-black">{{ $order->ref_number ?? '-' }}</td>
                             </tr>
+                            @if($order->proof_of_payment)
+                            <tr>
+                                <td class="fw-bold text-dark">Proof of Payment:</td>
+                                <td class="text-black">
+                                    <a href="{{ asset('storage/' . $order->proof_of_payment) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size: 0.75rem;">
+                                        <i class="las la-paperclip me-1"></i>View Proof of Payment
+                                    </a>
+                                </td>
+                            </tr>
+                            @endif
                             <tr>
                                 <td class="fw-bold text-dark">Freight Option:</td>
                                 <td class="text-black">
@@ -664,13 +674,19 @@
                     </div>
 
                     <!-- Signatories -->
+                    @php
+                        $siPreparer = $order->siPreparedBy ?: ($order->invoices->first()?->createdBy ?: $order->preparedBy);
+                        $siApprover = $order->signedBy ?: ($order->acctApprovedBy ?: ($order->invoices->first()?->approvedBy ?: ($order->mktApprovedBy ?: $order->prodApprovedBy)));
+                        $siPrepDate = $order->si_prepared_at ? \Carbon\Carbon::parse($order->si_prepared_at)->format('m/d/Y') : ($order->created_at ? $order->created_at->format('m/d/Y') : '-');
+                        $siApprDate = $order->signed_at ? \Carbon\Carbon::parse($order->signed_at)->format('m/d/Y') : ($order->acct_approved_at ? \Carbon\Carbon::parse($order->acct_approved_at)->format('m/d/Y') : ($order->mkt_approved_at ? \Carbon\Carbon::parse($order->mkt_approved_at)->format('m/d/Y') : '-'));
+                    @endphp
                     <div class="row mt-5 pt-3" style="font-size: 9pt;">
                         <div class="col-4">
                             <div class="mb-4 fw-bold text-uppercase text-muted" style="letter-spacing: 0.5px;">Prepared By:</div>
                             <div class="border-bottom border-dark mb-1" style="width: 90%;"></div>
-                            <div class="fw-bold text-dark" style="font-size: 10pt;">{{ $order->preparedBy->name ?? '____________________' }}</div>
-                            <div class="text-muted">{{ $order->preparedBy->position ?? 'Sales Representative' }}</div>
-                            <div class="text-muted">Date: {{ $order->created_at->format('m/d/Y') }}</div>
+                            <div class="fw-bold text-dark" style="font-size: 10pt;">{{ $siPreparer->name ?? '____________________' }}</div>
+                            <div class="text-muted">{{ $siPreparer->position ?? ($order->siPreparedBy ? 'Accounting Staff' : 'Sales Representative') }}</div>
+                            <div class="text-muted">Date: {{ $siPrepDate }}</div>
                         </div>
                         <div class="col-4 text-center">
                             <div class="mb-4 fw-bold text-uppercase text-muted text-start" style="letter-spacing: 0.5px; padding-left: 5%;">Checked By:</div>
@@ -681,14 +697,10 @@
                         <div class="col-4 text-end">
                             <div class="mb-4 fw-bold text-uppercase text-muted text-start" style="letter-spacing: 0.5px; padding-left: 10%;">Approved By:</div>
                             <div class="border-bottom border-dark mb-1 ms-auto" style="width: 90%;"></div>
-                            @if($order->mktApprovedBy)
-                                <div class="fw-bold text-start text-dark" style="font-size: 10pt; padding-left: 10%;">{{ $order->mktApprovedBy->name }}</div>
-                                <div class="text-muted text-start" style="padding-left: 10%;">{{ $order->mktApprovedBy->position ?? 'Marketing Manager' }}</div>
-                                <div class="text-muted text-start" style="padding-left: 10%;">Date: {{ $order->mkt_approved_at ? \Carbon\Carbon::parse($order->mkt_approved_at)->format('m/d/Y') : '-' }}</div>
-                            @elseif($order->prodApprovedBy)
-                                <div class="fw-bold text-start text-dark" style="font-size: 10pt; padding-left: 10%;">{{ $order->prodApprovedBy->name }}</div>
-                                <div class="text-muted text-start" style="padding-left: 10%;">{{ $order->prodApprovedBy->position ?? 'Production Manager' }}</div>
-                                <div class="text-muted text-start" style="padding-left: 10%;">Date: {{ $order->prod_approved_at ? \Carbon\Carbon::parse($order->prod_approved_at)->format('m/d/Y') : '-' }}</div>
+                            @if($siApprover)
+                                <div class="fw-bold text-start text-dark" style="font-size: 10pt; padding-left: 10%;">{{ $siApprover->name }}</div>
+                                <div class="text-muted text-start" style="padding-left: 10%;">{{ $siApprover->position ?? ($order->signedBy ? 'Finance Manager' : 'Authorized Signatory') }}</div>
+                                <div class="text-muted text-start" style="padding-left: 10%;">Date: {{ $siApprDate }}</div>
                             @else
                                 <div class="text-muted mt-2 text-start" style="padding-left: 10%;">&nbsp;</div>
                                 <div class="text-muted text-start" style="padding-left: 10%;">&nbsp;</div>

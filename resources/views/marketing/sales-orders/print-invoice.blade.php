@@ -776,14 +776,25 @@
             </div>
 
             <!-- Signatories -->
+            @php
+                $siPreparerName = $order->siPreparedBy?->name 
+                    ?: ($order->invoices->first()?->createdBy?->name 
+                    ?: ($order->preparedBy?->name ?? ''));
+
+                $siApproverName = $order->signedBy?->name 
+                    ?: ($order->acctApprovedBy?->name 
+                    ?: ($order->invoices->first()?->approvedBy?->name 
+                    ?: ($order->mktApprovedBy?->name 
+                    ?: ($order->prodApprovedBy?->name ?? ''))));
+            @endphp
             <div class="signatories-row">
                 <div class="sig-col">
                     <div class="sig-label">Prepared by:</div>
-                    <div class="sig-line">{{ $order->preparedBy?->name ?? '' }}</div>
+                    <div class="sig-line">{{ $siPreparerName }}</div>
                 </div>
                 <div class="sig-col">
                     <div class="sig-label">Approved by:</div>
-                    <div class="sig-line">{{ $order->mktApprovedBy?->name ?? ($order->prodApprovedBy?->name ?? '') }}</div>
+                    <div class="sig-line">{{ $siApproverName }}</div>
                 </div>
                 <div class="sig-col">
                     <div class="sig-label">Received by:</div>
@@ -894,8 +905,8 @@
         @endif
 
         <!-- Signatories -->
-        <div style="position: absolute; left: 3.02in; top: 9.54in; width: 1.8in; text-align: center; font-weight: bold; font-size: 8pt;">{{ $order->preparedBy?->name ?? '' }}</div>
-        <div style="position: absolute; left: 4.92in; top: 9.54in; width: 1.8in; text-align: center; font-weight: bold; font-size: 8pt;">{{ $order->mktApprovedBy?->name ?? ($order->prodApprovedBy?->name ?? '') }}</div>
+        <div style="position: absolute; left: 3.02in; top: 9.54in; width: 1.8in; text-align: center; font-weight: bold; font-size: 8pt;">{{ $siPreparerName }}</div>
+        <div style="position: absolute; left: 4.92in; top: 9.54in; width: 1.8in; text-align: center; font-weight: bold; font-size: 8pt;">{{ $siApproverName }}</div>
         <div style="position: absolute; left: 6.82in; top: 9.54in; width: 1.4in; text-align: center; font-weight: bold; font-size: 8pt;">{{ $custName }}</div>
     </div>
 
@@ -975,8 +986,8 @@
         </div>
 
         <!-- Signatories -->
-        <div style="position: absolute; left: 3.20in; top: 5.80in; width: 1.8in; text-align: center; font-weight: bold; font-size: 9.5pt;">{{ $order->preparedBy?->name ?? '' }}</div>
-        <div style="position: absolute; left: 5.15in; top: 5.80in; width: 1.8in; text-align: center; font-weight: bold; font-size: 9.5pt;">{{ $order->mktApprovedBy?->name ?? ($order->prodApprovedBy?->name ?? '') }}</div>
+        <div style="position: absolute; left: 3.20in; top: 5.80in; width: 1.8in; text-align: center; font-weight: bold; font-size: 9.5pt;">{{ $siPreparerName }}</div>
+        <div style="position: absolute; left: 5.15in; top: 5.80in; width: 1.8in; text-align: center; font-weight: bold; font-size: 9.5pt;">{{ $siApproverName }}</div>
         <div style="position: absolute; left: 6.95in; top: 5.80in; width: 1.5in; text-align: center; font-weight: bold; font-size: 9.5pt;">{{ $custName }}</div>
     </div>
 

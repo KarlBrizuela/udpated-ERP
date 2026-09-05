@@ -480,14 +480,25 @@
             </div>
 
             <!-- Signatories -->
+            @php
+                $siPreparerName = $order->siPreparedBy?->name 
+                    ?: ($order->invoices->first()?->createdBy?->name 
+                    ?: ($order->preparedBy?->name ?? ''));
+
+                $siApproverName = $order->signedBy?->name 
+                    ?: ($order->acctApprovedBy?->name 
+                    ?: ($order->invoices->first()?->approvedBy?->name 
+                    ?: ($order->mktApprovedBy?->name 
+                    ?: ($order->prodApprovedBy?->name ?? ''))));
+            @endphp
             <div class="signatories-row">
                 <div class="sig-col">
                     <div>Prepared by:</div>
-                    <div class="sig-line">{{ $order->preparedBy?->name ?? '' }}</div>
+                    <div class="sig-line">{{ $siPreparerName }}</div>
                 </div>
                 <div class="sig-col">
                     <div>Approved by:</div>
-                    <div class="sig-line">{{ $order->mktApprovedBy?->name ?? ($order->prodApprovedBy?->name ?? '') }}</div>
+                    <div class="sig-line">{{ $siApproverName }}</div>
                 </div>
                 <div class="sig-col">
                     <div>Received by:</div>
