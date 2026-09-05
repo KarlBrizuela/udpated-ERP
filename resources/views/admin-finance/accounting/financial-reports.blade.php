@@ -224,6 +224,140 @@
             color: #0f172a !important;
             border-color: #cbd5e1 !important;
         }
+
+        /* Unified Statement Tables */
+        .bs-unified-table {
+            width: 100% !important;
+            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        /* Group Header Rows */
+        .group-header-row {
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease-in-out;
+            background: #ffffff;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .group-header-row td {
+            padding: 9px 14px !important;
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+        }
+        .group-header-row:hover {
+            background-color: #f8fafc !important;
+        }
+        
+        /* Asset Group Active / Hover */
+        .group-header-row.asset-group {
+            border-left: 3px solid transparent;
+        }
+        .group-header-row.asset-group:hover {
+            border-left-color: #93c5fd;
+            background-color: #f8faff !important;
+        }
+        .group-header-row.asset-group.is-open {
+            background-color: #eff6ff !important;
+            border-left: 3px solid #2563eb !important;
+        }
+
+        /* Liability Group Active / Hover */
+        .group-header-row.liability-group {
+            border-left: 3px solid transparent;
+        }
+        .group-header-row.liability-group:hover {
+            border-left-color: #fca5a5;
+            background-color: #fff9f9 !important;
+        }
+        .group-header-row.liability-group.is-open {
+            background-color: #fff1f2 !important;
+            border-left: 3px solid #e11d48 !important;
+        }
+
+        /* Equity Group Active / Hover */
+        .group-header-row.equity-group {
+            border-left: 3px solid transparent;
+        }
+        .group-header-row.equity-group:hover {
+            border-left-color: #86efac;
+            background-color: #f7fdf9 !important;
+        }
+        .group-header-row.equity-group.is-open {
+            background-color: #f0fdf4 !important;
+            border-left: 3px solid #059669 !important;
+        }
+
+        /* Toggle Icon Indicator */
+        .group-toggle-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            color: #64748b;
+            transition: all 0.2s ease;
+            margin-right: 8px;
+            font-size: 0.68rem;
+            flex-shrink: 0;
+            border: 1px solid #e2e8f0;
+        }
+        .group-header-row:hover .group-toggle-indicator {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        .group-header-row.asset-group.is-open .group-toggle-indicator {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            transform: rotate(90deg);
+        }
+        .group-header-row.liability-group.is-open .group-toggle-indicator {
+            background: #e11d48;
+            color: #ffffff;
+            border-color: #e11d48;
+            transform: rotate(90deg);
+        }
+        .group-header-row.equity-group.is-open .group-toggle-indicator {
+            background: #059669;
+            color: #ffffff;
+            border-color: #059669;
+            transform: rotate(90deg);
+        }
+
+        /* Child Account Rows */
+        .child-account-row {
+            background-color: #fcfdfe;
+            transition: background-color 0.15s ease;
+        }
+        .child-account-row:hover {
+            background-color: #f1f5f9 !important;
+        }
+        .child-account-row td {
+            padding: 7px 14px 7px 34px !important;
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+        }
+        .child-account-code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #475569;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 1px 5px;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+        .child-account-name {
+            font-size: 0.82rem;
+            color: #334155;
+            font-weight: 500;
+        }
     </style>
     @endpush
 
@@ -358,218 +492,316 @@
                             </h5>
                             <p class="small mb-0" style="color: #475569 !important;">Compiled from General Ledger & modules for the selected period.</p>
                         </div>
-                        <form action="{{ route('admin-finance.financial-reports.index') }}" method="GET" class="d-flex gap-3 align-items-center">
-                            <input type="hidden" name="report" value="{{ $selectedReport }}">
-                            <span class="small fw-bold text-uppercase" style="color: #475569 !important; letter-spacing: 0.5px; font-size: 0.72rem;">Period:</span>
-                            <div class="d-flex align-items-center gap-2">
-                                <input type="date" name="start_date" class="form-control-custom" value="{{ $startDate }}" style="width: 160px; padding: 0 12px;">
-                                <span class="small" style="color: #475569 !important;">to</span>
-                                <input type="date" name="end_date" class="form-control-custom" value="{{ $endDate }}" style="width: 160px; padding: 0 12px;">
-                            </div>
-                            <button type="submit" class="btn text-white px-3 fw-bold d-inline-flex align-items-center justify-content-center" style="background-color: #D9251C; border-color: #D9251C; height: 38px; border-radius: 6px; font-size: 0.85rem;">
-                                <i class="las la-sync me-1"></i> Generate
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            @if($selectedReport === 'Balance Sheet')
+                            <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center fw-semibold px-3" style="height: 38px; border-radius: 6px; font-size: 0.82rem; border-color: #cbd5e1;" onclick="toggleAllAccountGroups()" title="Toggle expand or collapse for all account groups">
+                                <i id="toggleAllGroupsBtnIcon" class="las la-expand-arrows-alt me-1"></i> <span id="toggleAllGroupsBtnText">Expand All</span>
                             </button>
-                        </form>
+                            @endif
+                            <form action="{{ route('admin-finance.financial-reports.index') }}" method="GET" class="d-flex gap-2 align-items-center">
+                                <input type="hidden" name="report" value="{{ $selectedReport }}">
+                                <span class="small fw-bold text-uppercase" style="color: #475569 !important; letter-spacing: 0.5px; font-size: 0.72rem;">Period:</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="date" name="start_date" class="form-control-custom" value="{{ $startDate }}" style="width: 160px; padding: 0 12px;">
+                                    <span class="small" style="color: #475569 !important;">to</span>
+                                    <input type="date" name="end_date" class="form-control-custom" value="{{ $endDate }}" style="width: 160px; padding: 0 12px;">
+                                </div>
+                                <button type="submit" class="btn text-white px-3 fw-bold d-inline-flex align-items-center justify-content-center" style="background-color: #D9251C; border-color: #D9251C; height: 38px; border-radius: 6px; font-size: 0.85rem;">
+                                    <i class="las la-sync me-1"></i> Generate
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="card-body pt-3">
                         @if($selectedReport === 'Balance Sheet')
                         @php
-                            $totalCurrentAssets = collect($reportData['current_assets'])->sum('amount');
-                            $totalNonCurrentAssets = collect($reportData['non_current_assets'])->sum('amount');
-                            $totalAssetsSum = $totalCurrentAssets + $totalNonCurrentAssets;
+                            $totalAssetsSum = isset($reportData['asset_sections'])
+                                ? collect($reportData['asset_sections'])->sum('subtotal')
+                                : (collect($reportData['current_assets'])->sum('amount') + collect($reportData['other_current_assets'] ?? [])->sum('amount') + collect($reportData['non_current_assets'])->sum('amount') + collect($reportData['other_non_current_assets'] ?? [])->sum('amount'));
 
-                            $totalLiabilitiesSum = collect($reportData['liabilities'])->sum('amount');
+                            $totalLiabilitiesSum = isset($reportData['liability_sections'])
+                                ? collect($reportData['liability_sections'])->sum('subtotal')
+                                : collect($reportData['liabilities'])->sum('amount');
                             $totalEquitySum = collect($reportData['equity'])->sum('amount');
                             $totalLiabEquitySum = $totalLiabilitiesSum + $totalEquitySum;
                         @endphp
                         <!-- 1. BALANCE SHEET -->
                         <div class="row g-4">
+                            <!-- Left Column: Assets Breakdown -->
                             <div class="col-md-6">
-                                <h6 class="fw-bold text-uppercase border-bottom pb-2" style="color: #D9251C;">Assets (Current & Non-Current)</h6>
-                                <table class="table table-sm align-middle statement-table mb-3">
-                                    <thead>
-                                        <tr>
-                                            <th>Current Assets Account</th>
-                                            <th class="text-end">Balance (₱)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($reportData['current_assets'] as $ca)
-                                            @if(!empty($ca['is_group']))
-                                            <tr class="bg-light border-top border-bottom">
-                                                <td class="fw-bold" style="color: #D9251C; padding-left: 10px;">
-                                                    <i class="las la-layer-group me-1 fs-15"></i> {{ $ca['group_name'] }}
-                                                    <span class="badge bg-white text-secondary border ms-1 fw-normal" style="font-size: 0.68rem;">Account Group</span>
-                                                </td>
-                                                <td class="text-end fw-bold" style="color: #0f172a;">₱{{ number_format($ca['amount'], 2) }}</td>
-                                            </tr>
-                                            @foreach($ca['accounts'] as $sub)
-                                            <tr>
-                                                <td class="ps-4 text-muted small" style="font-size: 0.82rem;">
-                                                    <i class="las la-angle-right me-1 text-secondary opacity-50"></i> {{ $sub['code'] }} - {{ $sub['name'] }}
-                                                </td>
-                                                <td class="text-end text-muted small" style="font-size: 0.82rem;">₱{{ number_format($sub['amount'], 2) }}</td>
-                                            </tr>
-                                            @endforeach
-                                            @else
-                                            <tr>
-                                                <td>{{ $ca['account'] }}</td>
-                                                <td class="text-end fw-bold" style="color: #0f172a;">₱{{ number_format($ca['amount'], 2) }}</td>
-                                            </tr>
-                                            @endif
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="table-light border-top">
-                                            <td class="fw-bold text-uppercase small" style="color: #475569;">Subtotal Current Assets</td>
-                                            <td class="text-end fw-bold" style="color: #0f172a;">₱{{ number_format($totalCurrentAssets, 2) }}</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-
-                                <table class="table table-sm align-middle statement-table mb-3">
-                                    <thead>
-                                        <tr>
-                                            <th>Non-Current Assets Account</th>
-                                            <th class="text-end">Balance (₱)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($reportData['non_current_assets'] as $nca)
-                                            @if(!empty($nca['is_group']))
-                                            <tr class="bg-light border-top border-bottom">
-                                                <td class="fw-bold" style="color: #D9251C; padding-left: 10px;">
-                                                    <i class="las la-layer-group me-1 fs-15"></i> {{ $nca['group_name'] }}
-                                                    <span class="badge bg-white text-secondary border ms-1 fw-normal" style="font-size: 0.68rem;">Account Group</span>
-                                                </td>
-                                                <td class="text-end fw-bold" style="color: #0f172a;">₱{{ number_format($nca['amount'], 2) }}</td>
-                                            </tr>
-                                            @foreach($nca['accounts'] as $sub)
-                                            <tr>
-                                                <td class="ps-4 text-muted small" style="font-size: 0.82rem;">
-                                                    <i class="las la-angle-right me-1 text-secondary opacity-50"></i> {{ $sub['code'] }} - {{ $sub['name'] }}
-                                                </td>
-                                                <td class="text-end text-muted small" style="font-size: 0.82rem;">₱{{ number_format($sub['amount'], 2) }}</td>
-                                            </tr>
-                                            @endforeach
-                                            @else
-                                            <tr>
-                                                <td>{{ $nca['account'] }}</td>
-                                                <td class="text-end fw-bold" style="color: #0f172a;">₱{{ number_format($nca['amount'], 2) }}</td>
-                                            </tr>
-                                            @endif
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="table-light border-top">
-                                            <td class="fw-bold text-uppercase small" style="color: #475569;">Subtotal Non-Current Assets</td>
-                                            <td class="text-end fw-bold" style="color: #0f172a;">₱{{ number_format($totalNonCurrentAssets, 2) }}</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-
-                                <!-- Total Assets Summary Card -->
-                                <div class="p-3 rounded d-flex justify-content-between align-items-center" style="background-color: rgba(217, 37, 28, 0.08); border: 1.5px solid rgba(217, 37, 28, 0.25); border-radius: 8px;">
-                                    <div>
-                                        <span class="fw-bold text-uppercase d-block" style="color: #D9251C; font-size: 0.88rem; letter-spacing: 0.5px;">TOTAL ASSETS</span>
-                                        <span class="text-muted small">Current + Non-Current Assets</span>
+                                <div class="card shadow-sm border-0 mb-4" style="border: 1px solid #e2e8f0 !important; border-radius: 8px; overflow: hidden;">
+                                    <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 26px; height: 26px; background: rgba(37, 99, 235, 0.1); color: #2563eb;">
+                                                <i class="las la-wallet fs-15"></i>
+                                            </span>
+                                            <span class="fw-bold text-uppercase" style="color: #1e293b; font-size: 0.82rem; letter-spacing: 0.5px;">Assets Breakdown</span>
+                                        </div>
+                                        <span class="badge rounded-pill" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.66rem; font-weight: 600; padding: 2px 8px;">
+                                            4 Categories
+                                        </span>
                                     </div>
-                                    <span class="fw-bold fs-16" style="color: #D9251C;">₱{{ number_format($totalAssetsSum, 2) }}</span>
+
+                                    <table class="table table-hover align-middle mb-0 bs-unified-table">
+                                        <thead>
+                                            <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                                                <th class="py-2 px-3 text-uppercase text-muted" style="font-size: 0.69rem; letter-spacing: 0.5px; width: 68%;">Category / Account Name</th>
+                                                <th class="py-2 px-3 text-end text-uppercase text-muted" style="font-size: 0.69rem; letter-spacing: 0.5px; width: 32%;">Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if(isset($reportData['asset_sections']))
+                                                @foreach($reportData['asset_sections'] as $secKey => $sec)
+                                                @php
+                                                    $groupId = 'grp-asset-' . $secKey;
+                                                    $totalAccts = collect($sec['items'])->sum(function($it) { return !empty($it['is_group']) ? count($it['accounts']) : 1; });
+                                                @endphp
+                                                <tr class="group-header-row asset-group" 
+                                                    data-scope="asset" 
+                                                    data-group-id="{{ $groupId }}" 
+                                                    onclick="toggleAccountGroup('{{ $groupId }}', this, 'asset')" 
+                                                    title="Click to expand/collapse accounts">
+                                                    <td class="py-2 px-3">
+                                                        <div class="d-flex align-items-center">
+                                                            <span class="group-toggle-indicator me-2">
+                                                                <i class="las la-chevron-right group-chevron"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-dark fs-13">{{ $sec['title'] }}</span>
+                                                            @if($totalAccts > 0)
+                                                            <span class="badge text-muted ms-2" style="background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 0.64rem; font-weight: 500; border-radius: 10px; padding: 1px 6px;">
+                                                                {{ $totalAccts }}
+                                                            </span>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-end text-nowrap">
+                                                        <span class="fw-bold" style="color: #1e3a8a; font-size: 0.90rem;">{{ number_format($sec['subtotal'], 2) }}</span>
+                                                    </td>
+                                                </tr>
+
+                                                @forelse($sec['items'] as $item)
+                                                    @if(!empty($item['is_group']))
+                                                        @foreach($item['accounts'] as $sub)
+                                                        <tr class="child-row-{{ $groupId }} child-account-row d-none">
+                                                            <td class="py-2 ps-4 pe-2">
+                                                                <div class="d-flex align-items-center">
+                                                                    <span class="child-account-code">{{ $sub['code'] }}</span>
+                                                                    <span class="child-account-name text-truncate" title="{{ $sub['name'] }}">{{ $sub['name'] }}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td class="py-2 px-3 text-end text-nowrap">
+                                                                <span class="text-muted fw-semibold" style="font-size: 0.82rem;">{{ number_format($sub['amount'], 2) }}</span>
+                                                            </td>
+                                                        </tr>
+                                                        @endforeach
+                                                    @else
+                                                        <tr class="child-row-{{ $groupId }} child-account-row d-none">
+                                                            <td class="py-2 ps-4 pe-2">
+                                                                <span class="child-account-name text-truncate">{{ $item['account'] }}</span>
+                                                            </td>
+                                                            <td class="py-2 px-3 text-end text-nowrap">
+                                                                <span class="text-muted fw-semibold" style="font-size: 0.82rem;">{{ number_format($item['amount'], 2) }}</span>
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @empty
+                                                    <tr class="child-row-{{ $groupId }} child-account-row d-none">
+                                                        <td colspan="2" class="py-2 px-3 ps-4 text-muted small fst-italic">No accounts in this category</td>
+                                                    </tr>
+                                                @endforelse
+                                                @endforeach
+                                            @endif
+                                        </tbody>
+                                        <tfoot>
+                                            <tr style="background: linear-gradient(90deg, #eff6ff 0%, #ffffff 100%); border-top: 2px solid #bfdbfe;">
+                                                <td class="py-3 px-3 fw-bold text-uppercase" style="color: #1e40af; font-size: 0.82rem; letter-spacing: 0.5px;">
+                                                    <i class="las la-wallet me-1 fs-15"></i> TOTAL ASSETS
+                                                </td>
+                                                <td class="py-3 px-3 text-end fw-bold text-nowrap" style="color: #1e40af; font-size: 1.05rem;">
+                                                    {{ number_format($totalAssetsSum, 2) }}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
                                 </div>
                             </div>
 
+                            <!-- Right Column: Liabilities & Equity Breakdown -->
                             <div class="col-md-6">
-                                <h6 class="fw-bold text-uppercase border-bottom pb-2 text-dark">Liabilities & Equity</h6>
-                                <table class="table table-sm align-middle statement-table mb-3">
-                                    <thead>
-                                        <tr>
-                                            <th>Liabilities Account</th>
-                                            <th class="text-end">Balance (₱)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($reportData['liabilities'] as $liab)
-                                            @if(!empty($liab['is_group']))
-                                            <tr class="bg-light border-top border-bottom">
-                                                <td class="fw-bold text-danger" style="padding-left: 10px;">
-                                                    <i class="las la-layer-group me-1 fs-15"></i> {{ $liab['group_name'] }}
-                                                    <span class="badge bg-white text-secondary border ms-1 fw-normal" style="font-size: 0.68rem;">Account Group</span>
-                                                </td>
-                                                <td class="text-end fw-bold text-danger">₱{{ number_format($liab['amount'], 2) }}</td>
-                                            </tr>
-                                            @foreach($liab['accounts'] as $sub)
-                                            <tr>
-                                                <td class="ps-4 text-muted small" style="font-size: 0.82rem;">
-                                                    <i class="las la-angle-right me-1 text-secondary opacity-50"></i> {{ $sub['code'] }} - {{ $sub['name'] }}
-                                                </td>
-                                                <td class="text-end text-muted small" style="font-size: 0.82rem;">₱{{ number_format($sub['amount'], 2) }}</td>
-                                            </tr>
-                                            @endforeach
-                                            @else
-                                            <tr>
-                                                <td>{{ $liab['account'] }}</td>
-                                                <td class="text-end fw-bold text-danger">₱{{ number_format($liab['amount'], 2) }}</td>
-                                            </tr>
-                                            @endif
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="table-light border-top">
-                                            <td class="fw-bold text-uppercase small" style="color: #475569;">Total Liabilities</td>
-                                            <td class="text-end fw-bold text-danger">₱{{ number_format($totalLiabilitiesSum, 2) }}</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-
-                                <table class="table table-sm align-middle statement-table mb-3">
-                                    <thead>
-                                        <tr>
-                                            <th>Equity Account</th>
-                                            <th class="text-end">Balance (₱)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($reportData['equity'] as $eq)
-                                            @if(!empty($eq['is_group']))
-                                            <tr class="bg-light border-top border-bottom">
-                                                <td class="fw-bold text-success" style="padding-left: 10px;">
-                                                    <i class="las la-layer-group me-1 fs-15"></i> {{ $eq['group_name'] }}
-                                                    <span class="badge bg-white text-secondary border ms-1 fw-normal" style="font-size: 0.68rem;">Account Group</span>
-                                                </td>
-                                                <td class="text-end fw-bold text-success">₱{{ number_format($eq['amount'], 2) }}</td>
-                                            </tr>
-                                            @foreach($eq['accounts'] as $sub)
-                                            <tr>
-                                                <td class="ps-4 text-muted small" style="font-size: 0.82rem;">
-                                                    <i class="las la-angle-right me-1 text-secondary opacity-50"></i> {{ $sub['code'] }} - {{ $sub['name'] }}
-                                                </td>
-                                                <td class="text-end text-muted small" style="font-size: 0.82rem;">₱{{ number_format($sub['amount'], 2) }}</td>
-                                            </tr>
-                                            @endforeach
-                                            @else
-                                            <tr>
-                                                <td>{{ $eq['account'] }}</td>
-                                                <td class="text-end fw-bold text-success">₱{{ number_format($eq['amount'], 2) }}</td>
-                                            </tr>
-                                            @endif
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="table-light border-top">
-                                            <td class="fw-bold text-uppercase small" style="color: #475569;">Total Equity</td>
-                                            <td class="text-end fw-bold text-success">₱{{ number_format($totalEquitySum, 2) }}</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-
-                                <!-- Total Liabilities & Equity Summary Card -->
-                                <div class="p-3 rounded d-flex justify-content-between align-items-center" style="background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px;">
-                                    <div>
-                                        <span class="fw-bold text-uppercase d-block" style="color: #0f172a; font-size: 0.88rem; letter-spacing: 0.5px;">TOTAL LIABILITIES & EQUITY</span>
-                                        <span class="text-muted small">Total Obligations + Retained Equity</span>
+                                <div class="card shadow-sm border-0 mb-4" style="border: 1px solid #e2e8f0 !important; border-radius: 8px; overflow: hidden;">
+                                    <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 26px; height: 26px; background: rgba(225, 29, 72, 0.1); color: #e11d48;">
+                                                <i class="las la-balance-scale fs-15"></i>
+                                            </span>
+                                            <span class="fw-bold text-uppercase" style="color: #1e293b; font-size: 0.82rem; letter-spacing: 0.5px;">Liabilities & Equity Breakdown</span>
+                                        </div>
+                                        <span class="badge rounded-pill" style="background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; font-size: 0.66rem; font-weight: 600; padding: 2px 8px;">
+                                            4 Categories + Equity
+                                        </span>
                                     </div>
-                                    <span class="fw-bold fs-16" style="color: #0f172a;">₱{{ number_format($totalLiabEquitySum, 2) }}</span>
+
+                                    <table class="table table-hover align-middle mb-0 bs-unified-table">
+                                        <thead>
+                                            <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                                                <th class="py-2 px-3 text-uppercase text-muted" style="font-size: 0.69rem; letter-spacing: 0.5px; width: 68%;">Category / Account Name</th>
+                                                <th class="py-2 px-3 text-end text-uppercase text-muted" style="font-size: 0.69rem; letter-spacing: 0.5px; width: 32%;">Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- 4 LIABILITIES CATEGORIES -->
+                                            @if(isset($reportData['liability_sections']))
+                                                @foreach($reportData['liability_sections'] as $secKey => $sec)
+                                                @php
+                                                    $groupId = 'grp-liab-' . $secKey;
+                                                    $totalAccts = collect($sec['items'])->sum(function($it) { return !empty($it['is_group']) ? count($it['accounts']) : 1; });
+                                                @endphp
+                                                <tr class="group-header-row liability-group" 
+                                                    data-scope="liability" 
+                                                    data-group-id="{{ $groupId }}" 
+                                                    onclick="toggleAccountGroup('{{ $groupId }}', this, 'liability')" 
+                                                    title="Click to expand/collapse accounts">
+                                                    <td class="py-2 px-3">
+                                                        <div class="d-flex align-items-center">
+                                                            <span class="group-toggle-indicator me-2">
+                                                                <i class="las la-chevron-right group-chevron"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-dark fs-13">{{ $sec['title'] }}</span>
+                                                            @if($totalAccts > 0)
+                                                            <span class="badge text-muted ms-2" style="background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 0.64rem; font-weight: 500; border-radius: 10px; padding: 1px 6px;">
+                                                                {{ $totalAccts }}
+                                                            </span>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-end text-nowrap">
+                                                        <span class="fw-bold text-danger" style="font-size: 0.90rem;">{{ number_format($sec['subtotal'], 2) }}</span>
+                                                    </td>
+                                                </tr>
+
+                                                @forelse($sec['items'] as $item)
+                                                    @if(!empty($item['is_group']))
+                                                        @foreach($item['accounts'] as $sub)
+                                                        <tr class="child-row-{{ $groupId }} child-account-row d-none">
+                                                            <td class="py-2 ps-4 pe-2">
+                                                                <div class="d-flex align-items-center">
+                                                                    <span class="child-account-code">{{ $sub['code'] }}</span>
+                                                                    <span class="child-account-name text-truncate" title="{{ $sub['name'] }}">{{ $sub['name'] }}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td class="py-2 px-3 text-end text-nowrap">
+                                                                <span class="text-muted fw-semibold" style="font-size: 0.82rem;">{{ number_format($sub['amount'], 2) }}</span>
+                                                            </td>
+                                                        </tr>
+                                                        @endforeach
+                                                    @else
+                                                        <tr class="child-row-{{ $groupId }} child-account-row d-none">
+                                                            <td class="py-2 ps-4 pe-2">
+                                                                <span class="child-account-name text-truncate">{{ $item['account'] }}</span>
+                                                            </td>
+                                                            <td class="py-2 px-3 text-end text-nowrap">
+                                                                <span class="text-muted fw-semibold" style="font-size: 0.82rem;">{{ number_format($item['amount'], 2) }}</span>
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @empty
+                                                    <tr class="child-row-{{ $groupId }} child-account-row d-none">
+                                                        <td colspan="2" class="py-2 px-3 ps-4 text-muted small fst-italic">No accounts in this category</td>
+                                                    </tr>
+                                                @endforelse
+                                                @endforeach
+                                            @endif
+
+                                            <!-- TOTAL LIABILITIES SUB-ROW -->
+                                            <tr style="background: #fff9f9; border-top: 1px solid #fecdd3; border-bottom: 2px solid #fecdd3;">
+                                                <td class="py-2 px-3 fw-bold text-uppercase small" style="color: #be123c; font-size: 0.74rem; letter-spacing: 0.5px;">
+                                                    <i class="las la-file-invoice-dollar me-1"></i> Total Liabilities
+                                                </td>
+                                                <td class="py-2 px-3 text-end fw-bold text-danger text-nowrap" style="font-size: 0.90rem;">
+                                                    {{ number_format($totalLiabilitiesSum, 2) }}
+                                                </td>
+                                            </tr>
+
+                                            <!-- EQUITY HEADER DIVIDER -->
+                                            <tr style="background: #f0fdf4; border-top: 2px solid #dcfce7; border-bottom: 1px solid #dcfce7;">
+                                                <td colspan="2" class="py-2 px-3 fw-bold text-uppercase" style="color: #15803d; font-size: 0.72rem; letter-spacing: 0.5px;">
+                                                    <i class="las la-coins me-1"></i> Equity Breakdown
+                                                </td>
+                                            </tr>
+
+                                            <!-- EQUITY ITEMS -->
+                                            @foreach($reportData['equity'] as $eq)
+                                                @if(!empty($eq['is_group']))
+                                                @php
+                                                    $groupId = 'grp-eq-' . $loop->index;
+                                                @endphp
+                                                <tr class="group-header-row equity-group" 
+                                                    data-scope="equity" 
+                                                    data-group-id="{{ $groupId }}" 
+                                                    onclick="toggleAccountGroup('{{ $groupId }}', this, 'equity')" 
+                                                    title="Click to expand/collapse accounts">
+                                                    <td class="py-2 px-3">
+                                                        <div class="d-flex align-items-center">
+                                                            <span class="group-toggle-indicator me-2">
+                                                                <i class="las la-chevron-right group-chevron"></i>
+                                                            </span>
+                                                            <span class="fw-bold text-dark fs-13">{{ $eq['group_name'] }}</span>
+                                                            <span class="badge text-muted ms-2" style="background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 0.64rem; font-weight: 500; border-radius: 10px; padding: 1px 6px;">
+                                                                {{ count($eq['accounts']) }}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-end text-nowrap">
+                                                        <span class="fw-bold text-success" style="font-size: 0.90rem;">{{ number_format($eq['amount'], 2) }}</span>
+                                                    </td>
+                                                </tr>
+                                                @foreach($eq['accounts'] as $sub)
+                                                <tr class="child-row-{{ $groupId }} child-account-row d-none">
+                                                    <td class="py-2 ps-4 pe-2">
+                                                        <div class="d-flex align-items-center">
+                                                            <span class="child-account-code">{{ $sub['code'] }}</span>
+                                                            <span class="child-account-name text-truncate" title="{{ $sub['name'] }}">{{ $sub['name'] }}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-end text-nowrap">
+                                                        <span class="text-muted fw-semibold" style="font-size: 0.82rem;">{{ number_format($sub['amount'], 2) }}</span>
+                                                    </td>
+                                                </tr>
+                                                @endforeach
+                                                @else
+                                                <tr>
+                                                    <td class="py-2 px-3 text-dark fw-semibold ps-4" style="font-size: 0.84rem;">
+                                                        <i class="las la-angle-right me-1 text-muted"></i> {{ $eq['account'] }}
+                                                    </td>
+                                                    <td class="py-2 px-3 text-end fw-bold text-success text-nowrap" style="font-size: 0.88rem;">
+                                                        {{ number_format($eq['amount'], 2) }}
+                                                    </td>
+                                                </tr>
+                                                @endif
+                                            @endforeach
+
+                                            <!-- TOTAL EQUITY SUB-ROW -->
+                                            <tr style="background: #f7fdf9; border-top: 1px solid #bbf7d0; border-bottom: 2px solid #bbf7d0;">
+                                                <td class="py-2 px-3 fw-bold text-uppercase small" style="color: #15803d; font-size: 0.74rem; letter-spacing: 0.5px;">
+                                                    <i class="las la-check-circle me-1"></i> Total Equity
+                                                </td>
+                                                <td class="py-2 px-3 text-end fw-bold text-success text-nowrap" style="font-size: 0.90rem;">
+                                                    {{ number_format($totalEquitySum, 2) }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr style="background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%); border-top: 2px solid #cbd5e1;">
+                                                <td class="py-3 px-3 fw-bold text-uppercase" style="color: #0f172a; font-size: 0.82rem; letter-spacing: 0.5px;">
+                                                    <i class="las la-balance-scale me-1 fs-15"></i> TOTAL LIABILITIES & EQUITY
+                                                </td>
+                                                <td class="py-3 px-3 text-end fw-bold text-nowrap" style="color: #0f172a; font-size: 1.05rem;">
+                                                    {{ number_format($totalLiabEquitySum, 2) }}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -1363,4 +1595,76 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        function toggleAccountGroup(groupId, rowElem, scope) {
+            const isCurrentlyOpen = rowElem.classList.contains('is-open');
+            
+            // If opening this group and scope is specified ('asset', 'liability', 'equity'),
+            // close all other open groups in this SAME scope only.
+            if (scope && !isCurrentlyOpen) {
+                const scopeHeaders = document.querySelectorAll('.group-header-row[data-scope="' + scope + '"]');
+                scopeHeaders.forEach(function(header) {
+                    if (header !== rowElem && header.classList.contains('is-open')) {
+                        header.classList.remove('is-open');
+                        const otherGroupId = header.getAttribute('data-group-id');
+                        if (otherGroupId) {
+                            const otherChildRows = document.querySelectorAll('.child-row-' + otherGroupId);
+                            otherChildRows.forEach(function(r) {
+                                r.classList.add('d-none');
+                            });
+                        }
+                    }
+                });
+            }
+            
+            // Toggle clicked group
+            const childRows = document.querySelectorAll('.child-row-' + groupId);
+            if (isCurrentlyOpen) {
+                rowElem.classList.remove('is-open');
+                childRows.forEach(function(r) {
+                    r.classList.add('d-none');
+                });
+            } else {
+                rowElem.classList.add('is-open');
+                childRows.forEach(function(r) {
+                    r.classList.remove('d-none');
+                });
+            }
+        }
+
+        function toggleAllAccountGroups() {
+            const allChildRows = document.querySelectorAll('[class*="child-row-"]');
+            const allHeaders = document.querySelectorAll('.group-header-row');
+            
+            const anyHidden = Array.from(allChildRows).some(function(r) {
+                return r.classList.contains('d-none');
+            });
+            
+            allChildRows.forEach(function(r) {
+                if (anyHidden) {
+                    r.classList.remove('d-none');
+                } else {
+                    r.classList.add('d-none');
+                }
+            });
+            
+            allHeaders.forEach(function(h) {
+                if (anyHidden) {
+                    h.classList.add('is-open');
+                } else {
+                    h.classList.remove('is-open');
+                }
+            });
+            
+            const btnText = document.getElementById('toggleAllGroupsBtnText');
+            const btnIcon = document.getElementById('toggleAllGroupsBtnIcon');
+            if (btnText && btnIcon) {
+                btnText.textContent = anyHidden ? 'Collapse All' : 'Expand All';
+                btnIcon.className = anyHidden ? 'las la-compress-arrows-alt me-1' : 'las la-expand-arrows-alt me-1';
+            }
+        }
+    </script>
+    @endpush
 </x-app-layout>
