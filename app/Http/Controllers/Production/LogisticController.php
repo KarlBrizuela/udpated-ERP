@@ -3362,13 +3362,10 @@ class LogisticController extends Controller
 
             // Calculate charges
             $estimatedFreight = (float) $validated['estimated_freight'];
-            $valuationPercent = 0;
-            $isFreightCollect = ($validated['freight_option'] ?? null) === 'freight_collect';
-            $handlingPercent = $isFreightCollect ? (float) ($validated['handling_percentage'] ?? 20) : 0;
-
+            $handlingPercent = 0;
             $valuationCharge = 0;
-            $handlingFee = ($estimatedFreight * $handlingPercent) / 100;
-            $totalAmount = $estimatedFreight + $handlingFee;
+            $handlingFee = 0;
+            $totalAmount = $estimatedFreight;
 
             // Create freight quotation record
             $quotation = \App\Models\FreightQuotation::create([
@@ -3490,13 +3487,10 @@ class LogisticController extends Controller
             // Calculate charges
             $estimatedFreight = (float) ($validated['estimated_freight'] ?? 0);
             $boxesCount = !empty($validated['boxes_count']) ? (int)$validated['boxes_count'] : 0;
-            $valuationPercent = 0;
-            $isFreightCollect = $freightQuotation->freight_option === 'freight_collect';
-            $handlingPercent = $isFreightCollect ? (float) ($validated['handling_percentage'] ?? 20) : 0;
-
+            $handlingPercent = 0;
             $valuationCharge = 0;
-            $handlingFee = ($estimatedFreight * $handlingPercent) / 100;
-            $totalAmount = $estimatedFreight + $handlingFee;
+            $handlingFee = 0;
+            $totalAmount = $estimatedFreight;
 
             // Update quotation with logistics response
             $freightQuotation->update([
@@ -3623,13 +3617,10 @@ class LogisticController extends Controller
 
             if ($request->has('estimated_freight') && $request->input('estimated_freight') !== null && $request->input('estimated_freight') !== '') {
                 $estimatedFreight = (float) $request->input('estimated_freight');
-                $valuationPercent = 0;
-                $isFreightCollect = $freightQuotation->freight_option === 'freight_collect';
-                $handlingPercent = $isFreightCollect ? (float) ($freightQuotation->handling_percentage ?? 20) : 0;
-
+                $handlingPercent = 0;
                 $valuationCharge = 0;
-                $handlingFee = ($estimatedFreight * $handlingPercent) / 100;
-                $totalAmount = $estimatedFreight + $handlingFee;
+                $handlingFee = 0;
+                $totalAmount = $estimatedFreight;
 
                 $updateData['estimated_freight'] = $estimatedFreight;
                 $updateData['valuation_charge'] = $valuationCharge;

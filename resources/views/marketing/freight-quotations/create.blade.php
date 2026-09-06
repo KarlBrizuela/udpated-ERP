@@ -7,7 +7,7 @@
                         <h5 class="mb-0"><i class="bi bi-truck me-2"></i>Create Freight Quotation Request</h5>
                     </div>
                     <div class="card-body">
-                        <form id="freightQuotationForm" method="POST" action="{{ $storeRoute ?? route('marketing.freight-quotations.store') }}">
+                        <form id="freightQuotationForm" method="POST" action="{{ $storeRoute ?? route('marketing.freight-quotations.store') }}" enctype="multipart/form-data">
                             @csrf
                             @if(!empty($isFord))
                                 <input type="hidden" name="source" value="ford">
@@ -72,6 +72,16 @@
                                          <option value="USD" {{ old('currency', !empty($isFord) ? 'USD' : 'PHP') === 'USD' ? 'selected' : '' }}>USD ($)</option>
                                      </select>
                                     @error('currency')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Proof of Payment (Optional):</label>
+                                    <input type="file" class="form-control @error('proof_of_payment') is-invalid @enderror" 
+                                           name="proof_of_payment" id="fqProofOfPayment" accept=".pdf,.jpg,.jpeg,.png">
+                                    <small class="text-muted">Attach deposit slip, bank transfer screenshot, or receipt (PDF, JPG, PNG up to 10MB)</small>
+                                    @error('proof_of_payment')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                             </div>
 

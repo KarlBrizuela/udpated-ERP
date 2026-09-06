@@ -369,10 +369,13 @@
                                             @if($order->attachment)
                                                 <a href="/storage/{{ $order->attachment }}" target="_blank" class="text-primary mb-1 d-block"><i class="las la-paperclip"></i> PO</a>
                                             @endif
-                                            @if($order->proof_of_payment)
-                                                <a href="/storage/{{ $order->proof_of_payment }}" target="_blank" class="text-success d-block"><i class="las la-paperclip"></i> Payment</a>
+                                            @php
+                                                $orderPop = $order->proof_of_payment ?: ($order->freightQuotation?->proof_of_payment ?? null);
+                                            @endphp
+                                            @if($orderPop)
+                                                <a href="/storage/{{ $orderPop }}" target="_blank" class="text-success d-block"><i class="las la-paperclip"></i> Payment</a>
                                             @endif
-                                            @if(!$order->attachment && !$order->proof_of_payment)
+                                            @if(!$order->attachment && !$orderPop)
                                                 <span class="text-muted">None</span>
                                             @endif
                                         </td>

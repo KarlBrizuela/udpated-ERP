@@ -115,7 +115,7 @@ class FreightQuotationController extends Controller
                 'forwarder' => 'nullable|string|max:255',
                 'freight_option' => 'nullable|string|in:freight_collect,freight_billing,bill_client',
                 'currency' => 'nullable|string|in:PHP,USD,EUR',
-                'forwarder' => 'nullable|string|max:255',
+                'proof_of_payment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
                 'cargo_qty' => 'nullable|array',
                 'cargo_qty.*' => 'nullable|integer|min:1',
                 'cargo_package_type' => 'nullable|array',
@@ -168,6 +168,19 @@ class FreightQuotationController extends Controller
                 }
             }
 
+            // Resolve customer payment terms fallback if empty
+            $terms = $request->input('terms');
+            if (empty($terms)) {
+                $cust = Customer::where('customer_id', $validated['customer_id'])->first();
+                $terms = $cust?->payment_terms ?? $cust?->terms ?? null;
+            }
+
+            // Process proof of payment upload if present
+            $proofOfPaymentPath = null;
+            if ($request->hasFile('proof_of_payment')) {
+                $proofOfPaymentPath = $request->file('proof_of_payment')->store('sales_orders/proof_of_payments', 'public');
+            }
+
             // Create freight quotation record
             $quotation = FreightQuotation::create([
                 'quote_number' => $quoteNumber,
@@ -176,7 +189,8 @@ class FreightQuotationController extends Controller
                 'customer_id' => $validated['customer_id'],
                 'customer_representative' => $request->customer_representative,
                 'transaction_type' => $validated['transaction_type'] ?? 'paid',
-                'terms' => $request->input('terms'),
+                'terms' => $terms,
+                'proof_of_payment' => $proofOfPaymentPath,
                 'origin_contact' => $validated['origin_contact'],
                 'origin_address' => $validated['origin_address'],
                 'origin_province' => $validated['origin_province'],
@@ -251,12 +265,13 @@ class FreightQuotationController extends Controller
                         'billing_address' => $validated['destination_address'] ?? null,
                         'so_number' => $soNumber,
                         'type' => $soType,
-                        'terms' => $request->input('terms'),
+                        'terms' => $terms,
                         'currency' => $validated['currency'] ?? ($quotation->currency ?? 'PHP'),
                         'status' => 'draft',
                         'total_amount' => $itemsTotal,
                         'freight_option' => $validated['freight_option'] ?? ($quotation->freight_option ?? null),
                         'forwarder' => $validated['forwarder'] ?? ($quotation->forwarder ?? null),
+                        'proof_of_payment' => $proofOfPaymentPath,
                         'prepared_by' => auth()->id(),
                         'remarks' => 'Created from Freight Quotation #' . $quoteNumber,
                     ]);
@@ -779,16 +794,13 @@ class FreightQuotationController extends Controller
                 }
             }
 
-            // 2. Process Freight Charges
+            // 2. Process Freight Charges (Handling fee removed)
             $estimatedFreight = $request->has('estimated_freight') && $request->input('estimated_freight') !== null
                 ? (float) $request->input('estimated_freight')
                 : (float) $freightQuotation->estimated_freight;
 
-            $handlingFee = $request->has('handling_fee') && $request->input('handling_fee') !== null
-                ? (float) $request->input('handling_fee')
-                : (float) $freightQuotation->handling_fee;
-
-            $totalFreight = $estimatedFreight + $handlingFee;
+            $handlingFee = 0;
+            $totalFreight = $estimatedFreight;
             if ($request->has('total_amount') && $request->input('total_amount') !== null && (float)$request->input('total_amount') > 0) {
                 $totalFreight = (float) $request->input('total_amount');
             }
@@ -816,7 +828,7 @@ class FreightQuotationController extends Controller
                 'currency' => $request->input('currency', $freightQuotation->currency ?? 'PHP'),
                 'boxes_count' => $request->has('boxes_count') ? (int)$request->input('boxes_count') : $freightQuotation->boxes_count,
                 'estimated_freight' => $estimatedFreight,
-                'handling_fee' => $handlingFee,
+                'handling_fee' => 0,
                 'total_amount' => $totalFreight,
                 'logistics_notes' => $request->input('logistics_notes', $freightQuotation->logistics_notes),
                 'proof_of_payment' => $popPath,
@@ -827,6 +839,19 @@ class FreightQuotationController extends Controller
             }
 
             $freightQuotation->update($freightQuotationData);
+
+            if ($freightQuotation->sales_order_id && $freightQuotation->salesOrder) {
+                $soSync = [];
+                if ($popPath) {
+                    $soSync['proof_of_payment'] = $popPath;
+                }
+                if (!empty($freightQuotationData['terms'])) {
+                    $soSync['terms'] = $freightQuotationData['terms'];
+                }
+                if (!empty($soSync)) {
+                    $freightQuotation->salesOrder->update($soSync);
+                }
+            }
 
             // 5. Update or Create linked Sales Order and its items
             $marketingCtrl = new \App\Http\Controllers\MarketingController();

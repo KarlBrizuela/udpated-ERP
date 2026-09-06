@@ -146,10 +146,13 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold small text-muted mb-1">Proof of Payment:</label>
+                                @php
+                                    $orderPop = $order->proof_of_payment ?: ($order->freightQuotation?->proof_of_payment ?? null);
+                                @endphp
                                 <div>
-                                    @if($order->proof_of_payment)
-                                        <a href="{{ asset('storage/' . $order->proof_of_payment) }}" target="_blank" class="btn btn-sm btn-outline-success fw-bold">
-                                            <i class="las la-receipt me-1"></i> View Proof of Payment
+                                    @if($orderPop)
+                                        <a href="{{ asset('storage/' . $orderPop) }}" target="_blank" class="btn btn-sm btn-outline-success fw-bold">
+                                            <i class="las la-receipt me-1"></i> View Proof of Payment ({{ basename($orderPop) }})
                                         </a>
                                     @else
                                         <span class="badge bg-warning text-dark p-2"><i class="fas fa-exclamation-triangle me-1"></i> No Proof of Payment attached</span>

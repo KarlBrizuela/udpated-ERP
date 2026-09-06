@@ -206,22 +206,27 @@
                             @endif
                             <tr>
                                 <td class="fw-bold text-dark">Terms:</td>
-                                <td class="text-black">{{ $order->terms ?? '-' }}</td>
+                                <td class="text-black">{{ $order->terms ?: ($order->freightQuotation?->terms ?: ($order->customer?->payment_terms ?: '-')) }}</td>
                             </tr>
                             <tr>
                                 <td class="fw-bold text-dark">REF #:</td>
                                 <td class="text-black">{{ $order->ref_number ?? '-' }}</td>
                             </tr>
-                            @if($order->proof_of_payment)
+                            @php
+                                $orderPop = $order->proof_of_payment ?: ($order->freightQuotation?->proof_of_payment ?? null);
+                            @endphp
                             <tr>
                                 <td class="fw-bold text-dark">Proof of Payment:</td>
                                 <td class="text-black">
-                                    <a href="{{ asset('storage/' . $order->proof_of_payment) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size: 0.75rem;">
-                                        <i class="las la-paperclip me-1"></i>View Proof of Payment
-                                    </a>
+                                    @if($orderPop)
+                                        <a href="{{ asset('storage/' . $orderPop) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" style="font-size: 0.75rem;">
+                                            <i class="las la-paperclip me-1"></i>View Proof of Payment ({{ basename($orderPop) }})
+                                        </a>
+                                    @else
+                                        <span class="text-muted" style="font-size: 0.85rem;">Not attached (Optional)</span>
+                                    @endif
                                 </td>
                             </tr>
-                            @endif
                             <tr>
                                 <td class="fw-bold text-dark">Freight Option:</td>
                                 <td class="text-black">

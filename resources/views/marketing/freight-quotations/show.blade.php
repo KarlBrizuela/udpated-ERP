@@ -122,6 +122,12 @@
                                 </div>
                                 <div class="col-md-3">
                                     <div class="mb-2">
+                                        <small class="text-muted d-block mb-1"><strong>Terms</strong></small>
+                                        <p class="mb-0">{{ $quotation->terms ?: ($quotation->salesOrder?->terms ?: ($quotation->customer?->payment_terms ?: 'N/A')) }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-2">
                                         <small class="text-muted d-block mb-1"><strong>Freight Option</strong></small>
                                         <p class="mb-0">{{ $quotation->freight_option ? ucwords(str_replace('_', ' ', $quotation->freight_option)) : 'N/A' }}</p>
                                     </div>
@@ -253,28 +259,22 @@
                         <!-- Logistics Response (if approved or linked) -->
                         @if(in_array($quotation->workflow_status, ['approved', 'linked_to_so']) || $quotation->status === 'approved')
                             @php
-                                $displayTotal = $quotation->total_amount ?? ($quotation->estimated_freight + ($quotation->handling_fee ?? 0));
+                                $displayTotal = $quotation->total_amount ?? $quotation->estimated_freight;
                             @endphp
                             <div style="background: #f0fdf4; padding: 1rem; border-radius: 6px; border: 2px solid #10b981; margin-bottom: 1.5rem;">
                                 <h5 class="mb-3"><i class="bi bi-check-circle me-2"></i><strong>Logistics Quotation</strong></h5>
                                 
                                 <div class="row mb-3">
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <div class="mb-2">
                                             <small class="text-muted d-block mb-1"><strong>Boxes Count</strong></small>
                                             <p class="mb-0 fs-5"><strong>{{ $quotation->boxes_count ?? '-' }}</strong></p>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <div class="mb-2">
                                             <small class="text-muted d-block mb-1"><strong>Estimated Freight</strong></small>
                                             <p class="mb-0 fs-5"><strong class="text-danger">{{ $fqSym }} {{ number_format($quotation->estimated_freight, 2) }}</strong></p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-2">
-                                            <small class="text-muted d-block mb-1"><strong>Handling Fee</strong></small>
-                                            <p class="mb-0 fs-5"><strong class="text-danger">{{ $fqSym }} {{ number_format($quotation->handling_fee ?? 0, 2) }}</strong></p>
                                         </div>
                                     </div>
                                 </div>
@@ -321,20 +321,42 @@
                                             <span class="badge bg-info">{{ ucfirst($quotation->salesOrder->status) }}</span>
                                         </p>
                                     </div>
+                                </div>
+
+                                <div class="row mb-3">
                                     <div class="col-md-3">
                                         <small class="text-muted d-block mb-1"><strong>Date</strong></small>
                                         <p class="mb-0">{{ $quotation->salesOrder->created_at->format('M d, Y') }}</p>
                                     </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block mb-1"><strong>Terms</strong></small>
+                                        <p class="mb-0">{{ $quotation->salesOrder->terms ?: ($quotation->terms ?: ($quotation->salesOrder->customer?->payment_terms ?: 'N/A')) }}</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block mb-1"><strong>Proof of Payment</strong></small>
+                                        @php
+                                            $soPop = $quotation->salesOrder->proof_of_payment ?: ($quotation->proof_of_payment ?? null);
+                                        @endphp
+                                        <p class="mb-0">
+                                            @if($soPop)
+                                                <a href="{{ asset('storage/' . $soPop) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 fw-bold" style="font-size: 0.75rem;">
+                                                    <i class="bi bi-paperclip me-1"></i>View Attachment
+                                                </a>
+                                            @else
+                                                <span class="text-muted" style="font-size: 0.85rem;">Not attached</span>
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block mb-1"><strong>Transaction Type</strong></small>
+                                        <p class="mb-0">{{ ucfirst(str_replace('_', ' ', $quotation->salesOrder->type)) }}</p>
+                                    </div>
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-12">
                                         <small class="text-muted d-block mb-1"><strong>Delivery Address</strong></small>
                                         <p class="mb-0">{{ $quotation->salesOrder->billing_address ?? 'N/A' }}</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <small class="text-muted d-block mb-1"><strong>Transaction Type</strong></small>
-                                        <p class="mb-0">{{ ucfirst(str_replace('_', ' ', $quotation->salesOrder->type)) }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -460,8 +482,7 @@
                         @php
                             $popPath = $quotation->proof_of_payment ?: ($quotation->salesOrder?->proof_of_payment ?? null);
                         @endphp
-                        @if(in_array($quotation->workflow_status, ['approved', 'linked_to_so']) || $quotation->status === 'approved')
-                            <div class="proof-of-payment-box border rounded p-2 px-3 mb-3 bg-white shadow-sm" style="height: auto !important; min-height: 0 !important; max-height: max-content !important;">
+                        <div class="proof-of-payment-box border rounded p-2 px-3 mb-3 bg-white shadow-sm" style="height: auto !important; min-height: 0 !important; max-height: max-content !important;">
                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                     <!-- Title & Info -->
                                     <div class="d-flex align-items-center gap-2">
@@ -517,7 +538,6 @@
                                     <div class="text-danger small mt-1" style="font-size: 0.75rem;">{{ $message }}</div>
                                 @enderror
                             </div>
-                        @endif
 
                         <!-- Action Buttons -->
                         @php
@@ -770,22 +790,18 @@
                                     </div>
                                     <div class="p-3">
                                         <div class="row g-3">
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <label class="form-label small fw-bold">Boxes Count</label>
                                                 <input type="number" name="boxes_count" class="form-control form-control-sm" min="0" value="{{ $quotation->boxes_count ?? 1 }}">
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <label class="form-label small fw-bold">Estimated Freight (<span class="currency-symbol">{{ $quotation->currency ?? 'PHP' }}</span>)</label>
                                                 <input type="number" step="0.01" min="0" name="estimated_freight" id="edit_estimated_freight" class="form-control form-control-sm" value="{{ $quotation->estimated_freight ?? 0 }}" oninput="calculateFreightTotal()">
                                             </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label small fw-bold">Handling Fee (<span class="currency-symbol">{{ $quotation->currency ?? 'PHP' }}</span>)</label>
-                                                <input type="number" step="0.01" min="0" name="handling_fee" id="edit_handling_fee" class="form-control form-control-sm" value="{{ $quotation->handling_fee ?? 0 }}" oninput="calculateFreightTotal()">
-                                            </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <label class="form-label small fw-bold text-success">Total Freight Amount</label>
-                                                <input type="number" step="0.01" min="0" name="total_amount" id="edit_total_amount" class="form-control form-control-sm fw-bold border-success text-success" value="{{ $quotation->total_amount ?? (($quotation->estimated_freight ?? 0) + ($quotation->handling_fee ?? 0)) }}">
-                                                <div class="form-text" style="font-size: 0.7rem;">Auto-sums Est. Freight + Handling Fee (+ Service Fee if Freight Collect)</div>
+                                                <input type="number" step="0.01" min="0" name="total_amount" id="edit_total_amount" class="form-control form-control-sm fw-bold border-success text-success" value="{{ $quotation->total_amount ?? ($quotation->estimated_freight ?? 0) }}">
+                                                <div class="form-text" style="font-size: 0.7rem;">Auto-sums Est. Freight (+ Service Fee if Freight Collect)</div>
                                             </div>
                                             <div class="col-12">
                                                 <label class="form-label small fw-bold">Logistics Notes / Instructions</label>
@@ -1060,14 +1076,12 @@
 
         function calculateFreightTotal() {
             const estInput = document.getElementById('edit_estimated_freight');
-            const hndInput = document.getElementById('edit_handling_fee');
             const totInput = document.getElementById('edit_total_amount');
             const optionSelect = document.getElementById('edit_freight_option');
             const currencySelect = document.getElementById('edit_currency');
-            if (!estInput || !hndInput || !totInput) return;
+            if (!estInput || !totInput) return;
 
             const est = parseFloat(estInput.value) || 0;
-            const hnd = parseFloat(hndInput.value) || 0;
             const opt = optionSelect ? optionSelect.value : '';
             const curr = currencySelect ? currencySelect.value : 'PHP';
 
@@ -1076,7 +1090,7 @@
                 serviceFee = curr === 'USD' ? (50.0 / 56.0) : 50.0;
             }
 
-            totInput.value = (est + hnd + serviceFee).toFixed(2);
+            totInput.value = (est + serviceFee).toFixed(2);
         }
 
         function addSOItemOnEdit() {
