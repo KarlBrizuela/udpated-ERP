@@ -495,7 +495,7 @@
                                         <td><strong>{{ $item['reference_no'] }}</strong></td>
                                         <td>{{ $item['customer_name'] ?? ($item['original']->customer?->customer_name ?? ($item['original']->customer_representative ?? 'N/A')) }}</td>
                                         <td>{{ $item['submitted_by'] }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($item['submitted_date'])->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
+                                        <td data-order="{{ $item['submitted_date'] ? \Carbon\Carbon::parse($item['submitted_date'])->timestamp : 0 }}">{{ \Carbon\Carbon::parse($item['submitted_date'])->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
                                         <td>
                                             @if(is_numeric($item['amount']))
                                                 ₱ {{ number_format($item['amount'], 2) }}
@@ -607,7 +607,7 @@
                                         </td>
                                         <td><strong>{{ $submission['reference_no'] }}</strong></td>
                                         <td>{{ $submission['customer_name'] ?? ($submission['original']->customer?->customer_name ?? ($submission['original']->customer_representative ?? 'N/A')) }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($submission['submitted_date'])->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
+                                        <td data-order="{{ $submission['submitted_date'] ? \Carbon\Carbon::parse($submission['submitted_date'])->timestamp : 0 }}">{{ \Carbon\Carbon::parse($submission['submitted_date'])->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
                                         <td>{{ $submission['detail'] }}</td>
                                         <td>
                                             @if($submission['attachment'])
@@ -697,7 +697,7 @@
                                         </td>
                                         <td>{{ $approved['customer_name'] ?? ($approved['original']->customer?->customer_name ?? ($approved['original']->customer_representative ?? 'N/A')) }}</td>
                                         <td>{{ $approved['submitted_by'] ?? auth()->user()->name }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($approved['submitted_date'])->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
+                                        <td data-order="{{ $approved['submitted_date'] ? \Carbon\Carbon::parse($approved['submitted_date'])->timestamp : 0 }}">{{ \Carbon\Carbon::parse($approved['submitted_date'])->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
                                         <td>
                                             @php
                                                 $parts = explode(' - ', $approved['detail'], 2);
@@ -790,7 +790,7 @@
                                     <td><strong>{{ $order->so_number }}</strong></td>
                                     <td>{{ $order->customer?->customer_name ?? ($order->customer_representative ?: 'N/A') }}</td>
                                     <td>{{ $order->preparedBy->name ?? 'N/A' }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($order->created_at)->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
+                                    <td data-order="{{ $order->created_at ? \Carbon\Carbon::parse($order->created_at)->timestamp : 0 }}">{{ \Carbon\Carbon::parse($order->created_at)->timezone('Asia/Manila')->format('Y-m-d h:i A') }}</td>
                                     <td>Sales</td>
                                     <td>
                                         @if($order->type === 'complimentary' && in_array($order->status, ['picking', 'pending_ar_prep']) && !$order->ar_prepared_at)
@@ -812,7 +812,7 @@
                                     <td><strong>{{ $approval['reference_no'] }}</strong></td>
                                     <td>{{ $approval['customer_name'] ?? ($approval['original']->customer?->customer_name ?? ($approval['original']->customer_representative ?? 'N/A')) }}</td>
                                     <td>{{ $approval['submitted_by'] }}</td>
-                                    <td>{{ $approval['submitted_date'] }}</td>
+                                    <td data-order="{{ $approval['submitted_date'] ? \Carbon\Carbon::parse($approval['submitted_date'])->timestamp : 0 }}">{{ $approval['submitted_date'] }}</td>
                                     <td>{{ $approval['department'] }}</td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
@@ -1061,25 +1061,25 @@
 
         $(document).ready(function() {
             queueTable = $('#approvalQueueTable').DataTable({
-                order: [[3, 'desc']],
+                order: [[4, 'desc']],
                 pageLength: 10,
                 columnDefs: [{ orderable: false, targets: -1 }]
             });
 
             myApprovalsTable = $('#myApprovalsTable').DataTable({
-                order: [[3, 'desc']],
+                order: [[4, 'desc']],
                 pageLength: 10,
                 columnDefs: [{ orderable: false, targets: -1 }]
             });
 
             mySubmissionsTable = $('#mySubmissionsTable').DataTable({
-                order: [[2, 'desc']],
+                order: [[3, 'desc']],
                 pageLength: 10,
                 columnDefs: [{ orderable: false, targets: -1 }]
             });
 
             myApprovedTable = $('#myApprovedTable').DataTable({
-                order: [[3, 'desc']],
+                order: [[4, 'desc']],
                 pageLength: 10,
                 columnDefs: [{ orderable: false, targets: -1 }]
             });

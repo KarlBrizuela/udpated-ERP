@@ -441,7 +441,7 @@
         <table class="form-info-grid">
             <tr>
                 <td class="label-col">DR No.:</td>
-                <td class="val-col" style="width: 35%;">{{ $deliveryReceipt?->dr_number ?: 'DR-' . $order->so_number }}</td>
+                <td class="val-col" style="width: 35%;">{{ $order->si_number ?: ($deliveryReceipt?->si_number ?: ($deliveryReceipt?->dr_number ?: 'DR-' . $order->so_number)) }}</td>
                 <td class="label-col" style="padding-left: 15px;">Date:</td>
                 <td class="val-col">{{ $dateFormatted }}</td>
             </tr>

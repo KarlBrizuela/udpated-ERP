@@ -1733,6 +1733,40 @@ class MarketingController extends Controller
         ]);
     }
 
+    public function updateSiNumber(\Illuminate\Http\Request $request, $id)
+    {
+        $request->validate([
+            'si_number' => 'nullable|string|max:50'
+        ]);
+
+        $order = \App\Models\SalesOrder::findOrFail($id);
+        $siNum = trim($request->input('si_number', ''));
+        $order->si_number = $siNum ?: null;
+        $order->save();
+
+        if (!empty($siNum)) {
+            \App\Models\SalesInvoice::updateOrCreate(
+                ['so_id' => $order->id],
+                [
+                    'so_number'        => $order->so_number,
+                    'si_number'        => $siNum,
+                    'customer_id'      => $order->customer_id,
+                    'customer_name'    => $order->customer?->customer_name ?? 'N/A',
+                    'transaction_type' => $order->type . '_si',
+                    'total_amount'     => $order->total_amount,
+                    'status'           => $order->signed_by_af_manager ? 'approved' : 'draft',
+                    'created_by'       => auth()->id(),
+                ]
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'SI Number updated successfully.',
+            'si_number' => $order->si_number
+        ]);
+    }
+
     public function getUnifiedProducts($teamName = null)
     {
         $teamStocksMap = [];

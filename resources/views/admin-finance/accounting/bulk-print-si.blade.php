@@ -331,12 +331,13 @@
             <!-- Customer & Transaction Details -->
             @php
 
-                if ($activeInvoice) {
+                if ($activeInvoice && $activeInvoice->items && $activeInvoice->items->count() > 0) {
                     $itemsToPrint = $activeInvoice->items->filter(fn($i) => (float)($i->quantity ?? 0) > 0);
                     $totalSalesAmount = (float) $activeInvoice->total_amount;
                 } else {
                     $itemsToPrint = $order->items ? $order->items->filter(fn($i) => (float)($i->quantity ?? 0) > 0) : collect();
-                    $totalSalesAmount = (float) $order->total_amount;
+                    $totalSalesAmount = (float) ($activeInvoice->total_amount ?? $order->total_amount);
+                    $activeInvoice = null;
                 }
 
                 $isCash = in_array($order->payment_method, ['cash', 'gcash', 'paymaya', 'card', 'bank', 'check']) 
@@ -348,28 +349,62 @@
                 $orderDate = $order->created_at ? $order->created_at->format('m/d/Y') : date('m/d/Y');
                 $dueDate = $order->due_date ? \Carbon\Carbon::parse($order->due_date)->format('m/d/Y') : '-';
 
-                $itemsSubtotal = 0;
+                $itemsGrossSubtotal = 0;
+                $totalItemDiscounts = 0;
+                $itemsNetSubtotal = 0;
+                $itemDiscountPcts = [];
+
                 foreach ($itemsToPrint as $item) {
                     $qty = (float) $item->quantity;
                     $price = (float) ($item->unit_price ?? $item->price);
-                    $itemsSubtotal += (float) ($item->amount ?? ($item->subtotal !== null ? $item->subtotal : ($qty * $price)));
+                    $gross = $qty * $price;
+                    $discVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+                    $discType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+                    $discAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
+                    if ($discAmt <= 0 && $discVal > 0) {
+                        $discAmt = $discType === 'percentage' ? $gross * ($discVal / 100) : $discVal;
+                    }
+                    $discAmt = min($gross, max(0, $discAmt));
+                    if ($discAmt > 0 && $discType === 'percentage' && $discVal > 0) {
+                        $itemDiscountPcts[] = (float)$discVal;
+                    }
+
+                    $netSub = ($item->subtotal !== null && (float)$item->subtotal > 0 && (float)$item->subtotal < $gross)
+                        ? (float)$item->subtotal
+                        : max(0, $gross - $discAmt);
+
+                    $itemsGrossSubtotal += $gross;
+                    $totalItemDiscounts += $discAmt;
+                    $itemsNetSubtotal += $netSub;
                 }
 
-                $discount = (float) ($order->discount_amount ?? 0);
-                if ($discount == 0 && (float) ($order->discount_percentage ?? 0) > 0) {
-                    $discount = $itemsSubtotal * ((float) $order->discount_percentage / 100);
+                $orderDiscountPct = (float) ($order->discount_percentage ?? 0);
+                $orderDiscountAmt = (float) ($order->discount_amount ?? 0);
+                if ($orderDiscountAmt == 0 && $orderDiscountPct > 0) {
+                    $orderDiscountAmt = $itemsNetSubtotal * ($orderDiscountPct / 100);
                 }
+
+                $totalDiscount = $totalItemDiscounts + $orderDiscountAmt;
 
                 $freight = (float) ($order->freight_charges ?? 0);
                 $wht = (float) ($order->withholding_tax_amount ?? 0);
 
-                if ($discount > 0 || $freight > 0) {
-                    $calculatedTotalSales = max(0, $itemsSubtotal - $discount + $freight);
+                if ($totalDiscount > 0 || $freight > 0) {
+                    $calculatedTotalSales = max(0, $itemsGrossSubtotal - $totalDiscount + $freight);
                 } else {
-                    $calculatedTotalSales = $totalSalesAmount > 0 ? $totalSalesAmount : $itemsSubtotal;
+                    $calculatedTotalSales = $totalSalesAmount > 0 ? $totalSalesAmount : $itemsGrossSubtotal;
                 }
 
                 $totalAmountDue = max(0, $calculatedTotalSales - $wht);
+
+                $subtotalToDisplay = $totalDiscount > 0 ? $itemsGrossSubtotal : $itemsNetSubtotal;
+
+                $discountPctDisplay = null;
+                if ($orderDiscountPct > 0) {
+                    $discountPctDisplay = (float)$orderDiscountPct . '%';
+                } elseif ($totalItemDiscounts > 0 && count(array_unique($itemDiscountPcts)) === 1 && !empty($itemDiscountPcts)) {
+                    $discountPctDisplay = (float)$itemDiscountPcts[0] . '%';
+                }
             @endphp
 
             <table class="info-grid">
@@ -410,11 +445,28 @@
                             $desc = $item->book?->name ?? ($item->product_name ?? 'Product Item');
                             $qty = (float) $item->quantity;
                             $price = (float) ($item->unit_price ?? $item->price);
-                            $subtotal = (float) ($item->amount ?? ($item->subtotal !== null ? $item->subtotal : ($qty * $price)));
+                            $gross = $qty * $price;
+                            $discVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+                            $discType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+                            $discAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
+                            if ($discAmt <= 0 && $discVal > 0) {
+                                $discAmt = $discType === 'percentage' ? $gross * ($discVal / 100) : $discVal;
+                            }
+                            $discAmt = min($gross, max(0, $discAmt));
+                            $subtotal = ($item->subtotal !== null && (float)$item->subtotal > 0 && (float)$item->subtotal < $gross)
+                                ? (float)$item->subtotal
+                                : max(0, $gross - $discAmt);
                         @endphp
                         <tr>
                             <td style="text-align: center; font-weight: bold;">{{ $qty }}</td>
-                            <td style="font-weight: 600;">{{ $desc }}</td>
+                            <td style="font-weight: 600;">
+                                <div>{{ $desc }}</div>
+                                @if($discAmt > 0 || $discVal > 0)
+                                    <div class="item-discount-note" style="font-size: 7.5pt; color: #555; font-weight: normal; margin-top: 1px;">
+                                        Less {{ ($discType === 'percentage' && $discVal > 0) ? (float)$discVal . '% ' : '' }}Discount (-₱{{ number_format($discAmt > 0 ? $discAmt : $discVal, 2) }})
+                                    </div>
+                                @endif
+                            </td>
                             <td style="text-align: center;">{{ $item->area ?? '-' }}</td>
                             <td style="text-align: right;">₱{{ number_format($price, 2) }}</td>
                             <td style="text-align: right; font-weight: bold;">₱{{ number_format($subtotal, 2) }}</td>
@@ -443,16 +495,16 @@
                 </div>
                 <div class="totals-block text-end" style="display: flex; flex-direction: column; align-items: flex-end;">
                     <div class="subtotal-line" style="font-size: 8.5pt; font-weight: bold; margin-bottom: 3px;">
-                        <span class="total-label">SUBTOTAL: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">₱{{ number_format($itemsSubtotal, 2) }}</span>
+                        <span class="total-label">SUBTOTAL: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">₱{{ number_format($subtotalToDisplay, 2) }}</span>
                     </div>
                     @if($freight > 0)
                     <div class="freight-line" style="font-size: 8.5pt; font-weight: bold; margin-bottom: 3px;">
                         <span class="total-label">FREIGHT: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">₱{{ number_format($freight, 2) }}</span>
                     </div>
                     @endif
-                    @if($discount > 0)
+                    @if($totalDiscount > 0)
                     <div class="discount-line" style="font-size: 8.5pt; font-weight: bold; margin-bottom: 3px;">
-                        <span class="total-label">DISCOUNT: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">-₱{{ number_format($discount, 2) }}</span>
+                        <span class="total-label">DISCOUNT{{ $discountPctDisplay ? " ($discountPctDisplay)" : "" }}: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">-₱{{ number_format($totalDiscount, 2) }}</span>
                     </div>
                     @endif
                     <div class="withholding-tax-line" style="font-size: 8.5pt; font-weight: bold; margin-bottom: 3px;">

@@ -915,7 +915,9 @@ class AdminFinanceController extends Controller
 
     // Sort My Approvals by date descending
     usort($myApprovals, function ($a, $b) {
-      return $b['submitted_date'] <=> $a['submitted_date'];
+      $dateA = $a['submitted_date'] ? (\Carbon\Carbon::parse($a['submitted_date'])->timestamp ?? 0) : 0;
+      $dateB = $b['submitted_date'] ? (\Carbon\Carbon::parse($b['submitted_date'])->timestamp ?? 0) : 0;
+      return $dateB <=> $dateA;
     });
 
     // Fetch My Submissions (Unified)
@@ -1070,9 +1072,11 @@ class AdminFinanceController extends Controller
       ];
     }
 
-    // Sort all submissions by date
+    // Sort all submissions by date descending
     usort($mySubmissions, function ($a, $b) {
-      return $b['submitted_date'] <=> $a['submitted_date'];
+      $dateA = $a['submitted_date'] ? (\Carbon\Carbon::parse($a['submitted_date'])->timestamp ?? 0) : 0;
+      $dateB = $b['submitted_date'] ? (\Carbon\Carbon::parse($b['submitted_date'])->timestamp ?? 0) : 0;
+      return $dateB <=> $dateA;
     });
 
     // Filter approved requests for the Approved tab
@@ -1789,14 +1793,8 @@ public function checkVoucher()
             }
           } elseif ($order->status === 'pending_si_approval' || $actionType === 'sign') {
             $isCharge = $order->type === 'charge' || strtolower($order->transaction_type ?? '') === 'charge';
-            $isTeamOrder = !empty($order->preparedBy?->sales_team)
-                || !empty($order->areaSalesStaff?->sales_team)
-                || str_starts_with($order->preparedBy?->email ?? '', 'marketing_team')
-                || str_starts_with($order->areaSalesStaff?->email ?? '', 'marketing_team')
-                || stripos($order->customer?->customer_type ?? '', 'TEAM') !== false
-                || stripos($order->customer?->company_name ?? '', 'TEAM') !== false
-                || stripos($order->customer?->customer_name ?? '', 'TEAM') !== false
-                || str_contains($order->remarks ?? '', '[SITE: Team');
+            $isTeamOrder = (!empty($order->preparedBy?->sales_team) && trim($order->preparedBy->sales_team) !== '')
+                || (!empty($order->areaSalesStaff?->sales_team) && trim($order->areaSalesStaff->sales_team) !== '');
 
             if ($isTeamOrder || in_array($order->type, ['area_consignment', 'area_sales_consignment', 'direct_consignment'])) {
               $newStatus = 'completed';
@@ -1960,14 +1958,8 @@ public function checkVoucher()
     $isDirectConsignment = $order->type === 'direct_consignment';
     $isCharge = $order->type === 'charge' || strtolower($order->transaction_type ?? '') === 'charge';
 
-    $isTeamOrder = !empty($order->preparedBy?->sales_team)
-        || !empty($order->areaSalesStaff?->sales_team)
-        || str_starts_with($order->preparedBy?->email ?? '', 'marketing_team')
-        || str_starts_with($order->areaSalesStaff?->email ?? '', 'marketing_team')
-        || stripos($order->customer?->customer_type ?? '', 'TEAM') !== false
-        || stripos($order->customer?->company_name ?? '', 'TEAM') !== false
-        || stripos($order->customer?->customer_name ?? '', 'TEAM') !== false
-        || str_contains($order->remarks ?? '', '[SITE: Team');
+    $isTeamOrder = (!empty($order->preparedBy?->sales_team) && trim($order->preparedBy->sales_team) !== '')
+        || (!empty($order->areaSalesStaff?->sales_team) && trim($order->areaSalesStaff->sales_team) !== '');
 
     if ($isTeamOrder) {
       $newStatus = 'completed';
@@ -2105,7 +2097,8 @@ public function checkVoucher()
       'drPreparedBy', 
       'drApprovedBy',
       'signedBy',
-      'acctApprovedBy'
+      'acctApprovedBy',
+      'invoice'
     ])->findOrFail($id);
 
     $deliveryReceipt = \App\Models\DeliveryReceipt::with('items')->where('so_id', $order->id)->latest()->first();
@@ -3139,28 +3132,20 @@ public function checkVoucher()
     \Log::info('Processing approval for SO #' . $order->so_number . ' with ' . $order->items->count() . ' items');
     
 
-    // Determine if order belongs to Team A, B, or C (or user assigned to a sales team)
+    // Determine if the user who created the SO (or assigned staff) has a sales team.
+    // ONLY users assigned to a sales team bypass picklist and packing!
     $userTeam = null;
     if ($order->area_sales_staff_id) {
-        $staff = \App\Models\User::find($order->area_sales_staff_id);
-        if ($staff && !empty($staff->sales_team)) {
+        $staff = $order->areaSalesStaff ?: \App\Models\User::find($order->area_sales_staff_id);
+        if ($staff && !empty($staff->sales_team) && trim($staff->sales_team) !== '') {
             $userTeam = trim($staff->sales_team);
         }
     }
-    if (empty($userTeam) && $order->preparedBy && !empty($order->preparedBy->sales_team)) {
-        $userTeam = trim($order->preparedBy->sales_team);
-    }
-    if (empty($userTeam) && auth()->check() && !empty(auth()->user()->sales_team)) {
-        $userTeam = trim(auth()->user()->sales_team);
-    }
-    if (empty($userTeam) && (str_starts_with($order->preparedBy?->email ?? '', 'marketing_team') || str_starts_with($order->areaSalesStaff?->email ?? '', 'marketing_team'))) {
-        $userTeam = 'Team ABC';
-    }
-    if (empty($userTeam) && ($order->customer && stripos($order->customer->customer_type ?? '', 'TEAM') !== false)) {
-        $userTeam = trim($order->customer->customer_type);
-    }
-    if (empty($userTeam) && str_contains($order->remarks ?? '', '[SITE: Team')) {
-        $userTeam = 'Team ABC';
+    if (empty($userTeam)) {
+        $creator = $order->preparedBy ?: ($order->prepared_by ? \App\Models\User::find($order->prepared_by) : null);
+        if ($creator && !empty($creator->sales_team) && trim($creator->sales_team) !== '') {
+            $userTeam = trim($creator->sales_team);
+        }
     }
 
     $isTeamUser = !empty($userTeam);

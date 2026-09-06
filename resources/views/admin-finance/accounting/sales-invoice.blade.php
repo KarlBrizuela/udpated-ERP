@@ -488,7 +488,14 @@
                                                         <option value="card" {{ $currentPm === 'card' ? 'selected' : '' }}>💳 Card</option>
                                                     </select>
                                                 </td>
-                                                <td class="fw-bold">{{ $ordSym }}{{ number_format($displayAmount, 2) }}</td>
+                                                <td class="fw-bold">
+                                                    {{ $ordSym }}{{ number_format($displayAmount, 2) }}
+                                                    @if((float)($order->discount_percentage ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>{{ (float)$order->discount_percentage }}% off</small>
+                                                    @elseif((float)($order->discount_amount ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>-{{ $ordSym }}{{ number_format((float)$order->discount_amount, 2) }}</small>
+                                                    @endif
+                                                </td>
                                                 <td class="text-success fw-bold">{{ $ordSym }}{{ number_format($paidAmt, 2) }}</td>
                                                 <td class="text-danger fw-bold">{{ $ordSym }}{{ number_format($remBal, 2) }}</td>
                                                 <td>
@@ -686,7 +693,14 @@
                                                     $ecomCurr = $order->currency ?? 'PHP';
                                                     $ecomSym = ($ecomCurr === 'USD' ? '$' : ($ecomCurr === 'EUR' ? '€' : '₱'));
                                                 @endphp
-                                                <td class="fw-bold">{{ $ecomSym }}{{ number_format($order->total_amount, 2) }}</td>
+                                                <td class="fw-bold">
+                                                    {{ $ecomSym }}{{ number_format($order->total_amount, 2) }}
+                                                    @if((float)($order->discount_percentage ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>{{ (float)$order->discount_percentage }}% off</small>
+                                                    @elseif((float)($order->discount_amount ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>-{{ $ecomSym }}{{ number_format((float)$order->discount_amount, 2) }}</small>
+                                                    @endif
+                                                </td>
                                                 <td>
                                                     @php
                                                         $statusClass = 'secondary';
@@ -814,7 +828,14 @@
                                                         <option value="card" {{ $currentPm === 'card' ? 'selected' : '' }}>💳 Card</option>
                                                     </select>
                                                 </td>
-                                                <td class="fw-bold">{{ $siSym }}{{ number_format($totalAmt, 2) }}</td>
+                                                <td class="fw-bold">
+                                                    {{ $siSym }}{{ number_format($totalAmt, 2) }}
+                                                    @if((float)($si->salesOrder?->discount_percentage ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>{{ (float)$si->salesOrder->discount_percentage }}% off</small>
+                                                    @elseif((float)($si->salesOrder?->discount_amount ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>-{{ $siSym }}{{ number_format((float)$si->salesOrder->discount_amount, 2) }}</small>
+                                                    @endif
+                                                </td>
                                                 <td class="text-success fw-bold">{{ $siSym }}{{ number_format($paidAmt, 2) }}</td>
                                                 <td class="text-danger fw-bold">{{ $siSym }}{{ number_format($remBal, 2) }}</td>
                                                 <td><span class="badge bg-success text-white">Completed / Approved</span></td>
@@ -826,6 +847,13 @@
                                                              <i class="las la-ellipsis-v" style="font-size: 1.25rem;"></i>
                                                          </button>
                                                          <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 12px; border-radius: 6px; min-width: 140px; z-index: 1050;">
+                                                             @if($so || $si->so_id)
+                                                                 <li>
+                                                                     <a class="dropdown-item py-2" href="{{ route('admin-finance.sales-order.detail', $si->so_id ?? $so->id) }}">
+                                                                         <i class="las la-eye me-2 text-primary" style="font-size: 1rem;"></i> View SO Detail
+                                                                     </a>
+                                                                 </li>
+                                                             @endif
                                                              @if($remBal > 0 && $so && $so->customer_id)
                                                                  <li>
                                                                      <button type="button" class="dropdown-item py-2 open-pay-modal-btn" data-so-id="{{ $so->id }}" data-customer-id="{{ $so->customer_id }}" data-so-number="{{ $so->so_number }}" data-total="{{ $totalAmt }}" data-paid="{{ $paidAmt }}" data-remaining="{{ $remBal }}" data-terms="{{ $so->terms ?? 'COD' }}" data-due-date="{{ $so->due_date ? $so->due_date->format('M d, Y') : 'N/A' }}" data-currency="{{ $so->currency ?? 'USD' }}" data-symbol="{{ $siSym }}">
@@ -945,7 +973,14 @@
                                                     @endif
                                                 </td>
                                                 <td>{{ $si->customer_name ?? ($si->customer->customer_name ?? 'N/A') }}</td>
-                                                <td class="fw-bold">{{ $siSym }}{{ number_format($totalAmt, 2) }}</td>
+                                                <td class="fw-bold">
+                                                    {{ $siSym }}{{ number_format($totalAmt, 2) }}
+                                                    @if((float)($so?->discount_percentage ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>{{ (float)$so->discount_percentage }}% off</small>
+                                                    @elseif((float)($so?->discount_amount ?? 0) > 0)
+                                                        <br><small class="text-danger fw-semibold" style="font-size: 11px;"><i class="las la-tag me-1"></i>-{{ $siSym }}{{ number_format((float)$so->discount_amount, 2) }}</small>
+                                                    @endif
+                                                </td>
                                                 <td><span class="badge badge-{{ $pmBadgeColor }}">{{ $pmLabel }}</td>
                                                 <td>{{ $si->created_at->format('M d, Y') }}</td>
                                                 <td class="text-end">

@@ -87,9 +87,11 @@
                         $siNumberDisplay = $order->si_number ?: (\App\Models\SalesInvoice::where('so_id', $order->id)->value('si_number') ?? null);
                     @endphp
                     <div class="text-center text-uppercase fw-bold {{ $order->type === 'paid' ? 'text-success' : 'text-primary' }}">{{ $typeDisplay }}</div>
-                    @if($siNumberDisplay)
-                        <div class="text-center mt-1"><span class="badge bg-danger text-white px-3 py-1" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;"><i class="las la-file-invoice me-1"></i>SI #: {{ $siNumberDisplay }}</span></div>
-                    @endif
+                    <div id="headerSiBadgeContainer" class="text-center mt-1" style="{{ $siNumberDisplay ? '' : 'display:none;' }}">
+                        <span class="badge bg-danger text-white px-3 py-1" style="font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">
+                            <i class="las la-file-invoice me-1"></i>SI #: <span id="headerSiNumberDisplay">{{ $siNumberDisplay }}</span>
+                        </span>
+                    </div>
                     @else
                     <div class="document-title">SALES ORDER</div>
                     @endif
@@ -174,12 +176,20 @@
                                 <td class="fw-bold text-dark">Status:</td>
                                 <td><span class="badge bg-info text-white">{{ strtoupper(str_replace('_', ' ', $order->status)) }}</span></td>
                             </tr>
-                            @if($siNumberDisplay)
                             <tr>
-                                <td class="fw-bold text-dark"><i class="las la-file-invoice me-1 text-danger"></i>SI Number:</td>
-                                <td class="fw-bold text-danger">{{ $siNumberDisplay }}</td>
+                                <td class="fw-bold text-dark"><i class="las la-hashtag me-1 text-danger"></i>SI Number:</td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="max-width: 260px;">
+                                        <input type="text" id="reviewSiNumberInput" class="form-control fw-bold text-danger" 
+                                               value="{{ $order->si_number ?: (\App\Models\SalesInvoice::where('so_id', $order->id)->value('si_number') ?? '') }}" 
+                                               placeholder="e.g. 00123" style="font-size: 0.95rem; border: 2px solid #ced4da;">
+                                        <button type="button" class="btn btn-outline-danger" id="saveReviewSiBtn" onclick="saveSiNumberQuick()" title="Save SI Number">
+                                            <i class="las la-save"></i> Save
+                                        </button>
+                                    </div>
+                                    <small id="siSaveStatus" class="d-block mt-1" style="font-size: 0.75rem;"></small>
+                                </td>
                             </tr>
-                            @endif
                             <tr>
                                 <td class="fw-bold text-dark">Prepared By:</td>
                                 <td class="text-black">{{ $order->preparedBy->name ?? 'N/A' }}</td>
@@ -488,7 +498,7 @@
                     <button type="button" class="btn btn-light border" onclick="window.print()">
                         <i class="las la-print me-2"></i>Print Order
                     </button>
-                    <a href="{{ route('marketing.sales-orders.print-invoice', $order->id) }}" target="_blank" class="btn btn-primary">
+                    <a href="{{ route('marketing.sales-orders.print-invoice', $order->id) }}" target="_blank" class="btn btn-primary" onclick="return handlePrintSalesInvoice(event, this)">
                         <i class="las la-file-invoice me-1"></i>Print Sales Invoice
                     </a>
                     <button type="button" class="btn btn-info text-white" onclick="printShippingLabel('{{ route('marketing.sales-orders.shipping-label', $order->id) }}')">
@@ -840,6 +850,60 @@
                     document.getElementById('rejectForm').submit();
                 }
             }
+        }
+
+        function saveSiNumberQuick() {
+            const siVal = document.getElementById('reviewSiNumberInput')?.value?.trim() || '';
+            const statusEl = document.getElementById('siSaveStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '<span class="text-muted"><i class="las la-spinner la-spin"></i> Saving...</span>';
+            }
+
+            return fetch("{{ route('marketing.sales-orders.update-si-number', $order->id) }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ si_number: siVal })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (statusEl) statusEl.innerHTML = '<span class="text-success fw-bold"><i class="las la-check"></i> Saved</span>';
+                    const headerBadge = document.getElementById('headerSiBadgeContainer');
+                    const headerSi = document.getElementById('headerSiNumberDisplay');
+                    const printSiNumberEl = document.querySelector('.print-only .doc-no-val, .print-only span.text-danger');
+                    if (data.si_number) {
+                        if (headerSi) headerSi.textContent = data.si_number;
+                        if (headerBadge) headerBadge.style.display = '';
+                        if (printSiNumberEl) printSiNumberEl.textContent = data.si_number;
+                    } else {
+                        if (headerBadge) headerBadge.style.display = 'none';
+                    }
+                    setTimeout(() => { if (statusEl) statusEl.innerHTML = ''; }, 3000);
+                    return data;
+                } else {
+                    if (statusEl) statusEl.innerHTML = '<span class="text-danger">' + (data.message || 'Error saving') + '</span>';
+                    throw new Error(data.message || 'Error saving');
+                }
+            })
+            .catch(err => {
+                if (statusEl) statusEl.innerHTML = '<span class="text-danger">Failed to save SI Number</span>';
+                throw err;
+            });
+        }
+
+        function handlePrintSalesInvoice(event, el) {
+            const siInput = document.getElementById('reviewSiNumberInput');
+            if (siInput) {
+                event.preventDefault();
+                saveSiNumberQuick().finally(() => {
+                    window.open(el.href, '_blank');
+                });
+                return false;
+            }
+            return true;
         }
     </script>
     @endpush

@@ -47,9 +47,6 @@ class StockDeductionService
             if (empty($userTeam) && $order->preparedBy && !empty($order->preparedBy->sales_team)) {
                 $userTeam = trim($order->preparedBy->sales_team);
             }
-            if (empty($userTeam) && auth()->check() && !empty(auth()->user()->sales_team)) {
-                $userTeam = trim(auth()->user()->sales_team);
-            }
 
             $isConsignment = in_array($order->type, ['area_consignment', 'area_sales_consignment', 'direct_consignment']) || str_starts_with($order->so_number, 'SO-NBS-');
 
@@ -154,9 +151,6 @@ class StockDeductionService
             }
             if (empty($userTeam) && $order->preparedBy && !empty($order->preparedBy->sales_team)) {
                 $userTeam = trim($order->preparedBy->sales_team);
-            }
-            if (empty($userTeam) && auth()->check() && !empty(auth()->user()->sales_team)) {
-                $userTeam = trim(auth()->user()->sales_team);
             }
 
             foreach ($order->items as $item) {

@@ -77,6 +77,7 @@
 
         /* Invoice List */
         .invoices-list-section { margin-top: 2.5rem; }
+        .invoices-list-section .table-responsive { min-height: 260px; overflow-x: auto; }
         .status-badge { padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
         .status-pending_mkt_approval { background: #fff3cd; color: #856404; }
         .status-pending_prod_approval { background: #e0f2ff; color: #004085; }
@@ -416,10 +417,7 @@
                                     @endif
                                 </td>
                                 <td class="text-end">
-                                    <div class="d-flex justify-content-end gap-1 flex-wrap">
-                                        <a href="{{ route('admin-finance.accounting.sales-invoice.print', $inv->id) }}" target="_blank" class="btn btn-sm btn-outline-primary shadow-sm" title="Print Sales Invoice with data">
-                                            <i class="las la-print me-1"></i> Print SI
-                                        </a>
+                                    <div class="d-flex justify-content-end align-items-center gap-1">
                                         @php
                                             $canApprove = false;
                                             $userPos = auth()->user()->position ?? '';
@@ -431,11 +429,29 @@
                                         @if($canApprove)
                                             <form action="{{ route('marketing.direct-invoice.ecom.approve', $inv->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Approve this invoice? It will be routed to Sales Invoice (Accounting) for preparation.')">
                                                 @csrf
-                                                <button type="submit" class="btn btn-sm btn-success">
+                                                <button type="submit" class="btn btn-sm btn-success py-1 px-2" title="Approve">
                                                     <i class="las la-check me-1"></i>Approve
                                                 </button>
                                             </form>
                                         @endif
+
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-muted p-1 border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="box-shadow: none; font-size: 1.3rem; line-height: 1;" title="Actions">
+                                                <i class="las la-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 13px; min-width: 140px; z-index: 1050; border-radius: 6px;">
+                                                <li>
+                                                    <a class="dropdown-item py-2" href="{{ route('marketing.sales-orders.detail', $inv->id) }}">
+                                                        <i class="las la-eye me-2 text-info" style="font-size: 1.1rem;"></i> View SO
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item py-2" href="{{ route('admin-finance.accounting.sales-invoice.print', $inv->id) }}" target="_blank">
+                                                        <i class="las la-print me-2 text-primary" style="font-size: 1.1rem;"></i> Print SI
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>

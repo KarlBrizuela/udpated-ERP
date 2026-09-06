@@ -221,6 +221,18 @@
                         </thead>
                         <tbody>
                             @foreach($itemsToRender as $item)
+                            @php
+                                $itemQty = (float) $item->quantity;
+                                $itemPrice = (float) ($activeInvoice ? $item->unit_price : $item->price);
+                                $itemGross = $itemQty * $itemPrice;
+                                $discVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+                                $discType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+                                $discAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
+                                if ($discAmt <= 0 && $discVal > 0) {
+                                    $discAmt = $discType === 'percentage' ? $itemGross * ($discVal / 100) : $discVal;
+                                }
+                                $discAmt = min($itemGross, max(0, $discAmt));
+                            @endphp
                             <tr>
                                 <td class="text-center">
                                     {{ $item->quantity }} 
@@ -235,6 +247,11 @@
                                             <span class="badge bg-info text-white ms-1" style="font-size: 10px; padding: 3px 6px;">Index</span>
                                         @endif
                                     </div>
+                                    @if($discAmt > 0 || $discVal > 0)
+                                        <div class="small text-muted fw-normal mt-1">
+                                            Less {{ ($discType === 'percentage' && $discVal > 0) ? (float)$discVal . '% ' : '' }}Discount (-₱{{ number_format($discAmt > 0 ? $discAmt : $discVal, 2) }})
+                                        </div>
+                                    @endif
                                 </td>
                                 <td>
                                     {{ $activeInvoice ? ($item->book?->sku ?? '-') : ($item->isbn ?? '-') }}
@@ -249,29 +266,67 @@
                         </tbody>
                         <tfoot>
                             @php
-                                $itemsSubtotal = $itemsToRender->sum(function($item) {
-                                    return $item->amount ?? ($item->subtotal !== null ? $item->subtotal : ($item->quantity * $item->price));
-                                });
-                                $discountAmount = $order->discount_amount ?? 0;
-                                $discountPercentage = $order->discount_percentage ?? 0;
-                                $freightCharges = $order->freight_charges ?? 0;
+                                $itemsGrossSubtotal = 0;
+                                $totalItemDiscounts = 0;
+                                $itemsNetSubtotal = 0;
+                                $itemDiscountPcts = [];
+                                foreach ($itemsToRender as $item) {
+                                    $iQty = (float) $item->quantity;
+                                    $iPrice = (float) ($activeInvoice ? $item->unit_price : $item->price);
+                                    $iGross = $iQty * $iPrice;
+                                    $iDiscVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+                                    $iDiscType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+                                    $iDiscAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
+                                    if ($iDiscAmt <= 0 && $iDiscVal > 0) {
+                                        $iDiscAmt = $iDiscType === 'percentage' ? $iGross * ($iDiscVal / 100) : $iDiscVal;
+                                    }
+                                    $iDiscAmt = min($iGross, max(0, $iDiscAmt));
+                                    if ($iDiscAmt > 0 && $iDiscType === 'percentage' && $iDiscVal > 0) {
+                                        $itemDiscountPcts[] = (float)$iDiscVal;
+                                    }
+                                    $iNet = ($item->subtotal !== null && (float)$item->subtotal > 0 && (float)$item->subtotal < $iGross)
+                                        ? (float)$item->subtotal
+                                        : max(0, $iGross - $iDiscAmt);
+                                    $itemsGrossSubtotal += $iGross;
+                                    $totalItemDiscounts += $iDiscAmt;
+                                    $itemsNetSubtotal += $iNet;
+                                }
+
+                                $orderDiscountPct = (float) ($order->discount_percentage ?? 0);
+                                $orderDiscountAmt = (float) ($order->discount_amount ?? 0);
+                                if ($orderDiscountAmt == 0 && $orderDiscountPct > 0) {
+                                    $orderDiscountAmt = $itemsNetSubtotal * ($orderDiscountPct / 100);
+                                }
+
+                                $totalDiscount = $totalItemDiscounts + $orderDiscountAmt;
+
+                                $subtotalToDisplay = $totalDiscount > 0 ? $itemsGrossSubtotal : $itemsNetSubtotal;
+
+                                $discountPctDisplay = null;
+                                if ($orderDiscountPct > 0) {
+                                    $discountPctDisplay = (float)$orderDiscountPct . '%';
+                                } elseif ($totalItemDiscounts > 0 && count(array_unique($itemDiscountPcts)) === 1 && !empty($itemDiscountPcts)) {
+                                    $discountPctDisplay = (float)$itemDiscountPcts[0] . '%';
+                                }
+
+                                $freightCharges = (float) ($order->freight_charges ?? 0);
                                 $serviceFee = $order->freight_option === 'freight_collect' ? 50 : 0;
                             @endphp
                             <tr>
                                 <td colspan="5" class="text-end text-uppercase"><strong>Items Subtotal:</strong></td>
-                                <td class="text-end fw-bold">₱{{ number_format($itemsSubtotal, 2) }}</td>
+                                <td class="text-end fw-bold">₱{{ number_format($subtotalToDisplay, 2) }}</td>
                             </tr>
-                            @if($discountAmount > 0)
+                            @if($totalDiscount > 0)
                             <tr>
                                 <td colspan="5" class="text-end text-uppercase">
                                     <strong>
                                         Discount
-                                        @if($discountPercentage > 0)
-                                            ({{ (float)$discountPercentage }}%)
+                                        @if($discountPctDisplay)
+                                            ({{ $discountPctDisplay }})
                                         @endif:
                                     </strong>
                                 </td>
-                                <td class="text-end fw-bold text-danger">- ₱{{ number_format($discountAmount, 2) }}</td>
+                                <td class="text-end fw-bold text-danger">- ₱{{ number_format($totalDiscount, 2) }}</td>
                             </tr>
                             @endif
                             @if($freightCharges > 0)
@@ -297,7 +352,7 @@
                         <div class="col-md-12">
                             <div class="alert alert-info">
                                 <i class="las la-info-circle me-2"></i>
-                                By submitting, you are marking this Sales Invoice as <strong>Prepared by {{ auth()->user()->name }}</strong>.
+                                By submitting, you are marking this Sales Invoice as <strong>Prepared by {{ auth()->user()?->name ?? 'Staff' }}</strong>.
                             </div>
                         </div>
                     </div>

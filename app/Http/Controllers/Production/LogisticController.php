@@ -1448,11 +1448,12 @@ class LogisticController extends Controller
             if (!$order->dr_prepared_by && $order->preparedBy && $this->isAccountingUser($order->preparedBy)) {
                 return true;
             }
-            if (in_array($order->type, ['area_consignment', 'area_sales_consignment'])) {
-                $userTeam = $order->preparedBy->sales_team ?? $order->areaSalesStaff->sales_team ?? null;
-                if (!empty($userTeam)) {
-                    return true;
-                }
+            // Any order created by a user with a sales team (or assigned area sales staff with sales team) belongs to Accounting DR
+            $userTeam = (!empty($order->preparedBy?->sales_team) && trim($order->preparedBy->sales_team) !== '')
+                ? trim($order->preparedBy->sales_team)
+                : ((!empty($order->areaSalesStaff?->sales_team) && trim($order->areaSalesStaff->sales_team) !== '') ? trim($order->areaSalesStaff->sales_team) : null);
+            if (!empty($userTeam)) {
+                return true;
             }
         }
         if ($deliveryReceipt) {
@@ -1461,6 +1462,9 @@ class LogisticController extends Controller
             }
             if ($deliveryReceipt->preparedByUser && $this->isAccountingUser($deliveryReceipt->preparedByUser)) {
                 return true;
+            }
+            if ($deliveryReceipt->salesOrder) {
+                return $this->isAccountingOrderOrDr($deliveryReceipt->salesOrder);
             }
         }
         return false;
@@ -1515,7 +1519,9 @@ class LogisticController extends Controller
                         $u->whereIn('department', ['Accounting', 'Admin & Finance', 'Credit and Collection'])
                           ->orWhere('position', 'like', '%Accounting%')
                           ->orWhere('position', 'like', '%Finance%')
-                          ->orWhereNotNull('sales_team');
+                          ->orWhere(function ($st) {
+                              $st->whereNotNull('sales_team')->where('sales_team', '!=', '');
+                          });
                     })
                     ->orWhereHas('areaSalesStaff', function ($u) {
                         $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
@@ -1540,7 +1546,9 @@ class LogisticController extends Controller
                               $u->whereIn('department', ['Accounting', 'Admin & Finance', 'Credit and Collection'])
                                 ->orWhere('position', 'like', '%Accounting%')
                                 ->orWhere('position', 'like', '%Finance%')
-                                ->orWhereNotNull('sales_team');
+                                ->orWhere(function ($st) {
+                                    $st->whereNotNull('sales_team')->where('sales_team', '!=', '');
+                                });
                           })
                           ->whereDoesntHave('areaSalesStaff', function ($u) {
                               $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
@@ -1765,8 +1773,14 @@ class LogisticController extends Controller
                               ->orWhere('division', 'like', '%Finance%')
                               ->orWhereIn('department', ['Accounting', 'Admin & Finance', 'Credit and Collection'])
                               ->orWhere('position', 'like', '%Accounting%')
-                              ->orWhere('position', 'like', '%Finance%');
+                              ->orWhere('position', 'like', '%Finance%')
+                              ->orWhere(function ($st) {
+                                  $st->whereNotNull('sales_team')->where('sales_team', '!=', '');
+                              });
                         });
+                })
+                ->orWhereHas('areaSalesStaff', function ($u) {
+                    $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
                 })
                 ->orWhere('remarks', 'like', '%[ACCOUNTING_DR]%');
             });
@@ -1787,8 +1801,14 @@ class LogisticController extends Controller
                                    ->orWhere('division', 'like', '%Finance%')
                                    ->orWhereIn('department', ['Accounting', 'Admin & Finance', 'Credit and Collection'])
                                    ->orWhere('position', 'like', '%Accounting%')
-                                   ->orWhere('position', 'like', '%Finance%');
+                                   ->orWhere('position', 'like', '%Finance%')
+                                   ->orWhere(function ($st) {
+                                       $st->whereNotNull('sales_team')->where('sales_team', '!=', '');
+                                   });
                              });
+                    })
+                    ->whereDoesntHave('areaSalesStaff', function ($u) {
+                        $u->whereNotNull('sales_team')->where('sales_team', '!=', '');
                     });
                 })
                 ->where(function ($sub3) {
@@ -1992,7 +2012,12 @@ class LogisticController extends Controller
         $isCharge = $order->type === 'charge' || strtolower($order->transaction_type ?? '') === 'charge';
         $hasSI = !empty($order->si_prepared_at) || !empty($order->si_number) || \App\Models\SalesInvoice::where('so_id', $order->id)->exists();
         
-        if ($isCharge || $hasSI) {
+        $isTeamOrder = (!empty($order->preparedBy?->sales_team) && trim($order->preparedBy->sales_team) !== '')
+            || (!empty($order->areaSalesStaff?->sales_team) && trim($order->areaSalesStaff->sales_team) !== '');
+
+        if ($isTeamOrder) {
+            $newStatus = 'completed';
+        } elseif ($isCharge || $hasSI) {
             $newStatus = 'ready_for_packing';
         } elseif ($isAccountingContext && !in_array($order->type, ['area_consignment', 'area_sales_consignment', 'direct_consignment']) && $order->transaction_type !== 'consignment') {
             $newStatus = 'pending_si_prep';
@@ -2663,6 +2688,7 @@ class LogisticController extends Controller
                       });
             });
         // Do not exclude ready_for_packing Sales Orders from Packing Queue
+        $this->excludeTeamSalesOrders($packingOrdersQuery);
         $packingOrders = $packingOrdersQuery->orderBy('id', 'desc')->get();
 
         // Get complimentary orders ready for packing - EXCLUDING Team A, B, C

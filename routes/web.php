@@ -404,6 +404,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/marketing/sales-order/{id?}', [MarketingController::class, 'salesOrderDetail'])->name('marketing.sales-orders.detail');
     Route::get('/marketing/sales-orders/{id}/shipping-label', [MarketingController::class, 'shippingLabel'])->name('marketing.sales-orders.shipping-label');
     Route::get('/marketing/sales-orders/{id}/print-invoice', [MarketingController::class, 'printSalesInvoiceForm'])->name('marketing.sales-orders.print-invoice');
+    Route::post('/marketing/sales-orders/{id}/update-si-number', [MarketingController::class, 'updateSiNumber'])->name('marketing.sales-orders.update-si-number');
     Route::get('/marketing/direct-invoice-website', [MarketingController::class, 'directInvoiceWebsite'])->name('marketing.direct-invoice.website');
     Route::post('/marketing/direct-invoice-website', [MarketingController::class, 'storeDirectInvoice'])->name('marketing.direct-invoice.website.store');
     Route::get('/marketing/direct-invoice-website/list', [MarketingController::class, 'directInvoiceList'])->name('marketing.direct-invoice.website.list');

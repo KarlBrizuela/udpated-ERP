@@ -529,12 +529,13 @@
             $activeInvoice = \App\Models\SalesInvoice::where('so_id', $order->id)->where('status', '!=', 'cancelled')->latest()->first();
         }
 
-        if ($activeInvoice) {
+        if ($activeInvoice && $activeInvoice->items && $activeInvoice->items->count() > 0) {
             $allItems = $activeInvoice->items->filter(fn($i) => (float)($i->quantity ?? 0) > 0);
             $totalSalesAmount = (float) $activeInvoice->total_amount;
         } else {
             $allItems = $order->items ? $order->items->filter(fn($i) => (float)($i->quantity ?? 0) > 0) : collect();
-            $totalSalesAmount = (float) $order->total_amount;
+            $totalSalesAmount = (float) ($activeInvoice->total_amount ?? $order->total_amount);
+            $activeInvoice = null;
         }
 
         // Split items if half parameter is set
@@ -573,42 +574,67 @@
         $orderDate = $order->created_at ? $order->created_at->format('m/d/Y') : date('m/d/Y');
         $dueDate = ($order->due_date && $order->due_date !== 'N/A') ? \Carbon\Carbon::parse($order->due_date)->format('m/d/Y') : '';
         $wht = (float) ($order->withholding_tax_amount ?? 0);
-        $siNoDisplay = $order->si_number ?: ($activeInvoice->si_number ?? $order->so_number);
+        $siNoDisplay = $order->si_number ?: ($activeInvoice?->si_number ?? (\App\Models\SalesInvoice::where('so_id', $order->id)->where('status', '!=', 'cancelled')->latest()->value('si_number') ?? $order->so_number));
         $soSym = ($order->currency === 'USD' ? '$' : '₱');
 
-        $itemsSubtotal = 0;
+        $itemsGrossSubtotal = 0;
+        $totalItemDiscounts = 0;
+        $itemsNetSubtotal = 0;
+        $itemDiscountPcts = [];
+
         foreach ($itemsToPrint as $item) {
             $qty = (float) $item->quantity;
             $price = (float) ($item->unit_price ?? $item->price);
             $gross = $qty * $price;
-            $discVal = (float)($item->discount_value ?? 0);
-            $discType = $item->discount_type ?? 'percentage';
-            $discAmt = (float)($item->discount_amount ?? 0);
+            $discVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+            $discType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+            $discAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
             if ($discAmt <= 0 && $discVal > 0) {
                 $discAmt = $discType === 'percentage' ? $gross * ($discVal / 100) : $discVal;
             }
             $discAmt = min($gross, max(0, $discAmt));
+            if ($discAmt > 0 && $discType === 'percentage' && $discVal > 0) {
+                $itemDiscountPcts[] = (float)$discVal;
+            }
+
             $netSub = ($item->subtotal !== null && (float)$item->subtotal > 0 && (float)$item->subtotal < $gross)
                 ? (float)$item->subtotal
                 : max(0, $gross - $discAmt);
-            $itemsSubtotal += $netSub;
+
+            $itemsGrossSubtotal += $gross;
+            $totalItemDiscounts += $discAmt;
+            $itemsNetSubtotal += $netSub;
         }
 
-        $discount = (float) ($order->discount_amount ?? 0);
-        if ($discount == 0 && (float) ($order->discount_percentage ?? 0) > 0) {
-            $discount = $itemsSubtotal * ((float) $order->discount_percentage / 100);
+        $orderDiscountPct = (float) ($order->discount_percentage ?? 0);
+        $orderDiscountAmt = (float) ($order->discount_amount ?? 0);
+        if ($orderDiscountAmt == 0 && $orderDiscountPct > 0) {
+            $orderDiscountAmt = $itemsNetSubtotal * ($orderDiscountPct / 100);
         }
+
+        $totalDiscount = $totalItemDiscounts + $orderDiscountAmt;
 
         $freight = (float) ($order->freight_charges ?? 0);
         $serviceFee = (float) ($order->service_fee ?? ($order->freight_option === 'freight_collect' ? 50 : 0));
 
-        if ($discount > 0 || $freight > 0 || $serviceFee > 0) {
-            $calculatedTotalSales = max(0, $itemsSubtotal - $discount + $freight + $serviceFee);
+        if ($totalDiscount > 0 || $freight > 0 || $serviceFee > 0) {
+            $calculatedTotalSales = max(0, $itemsGrossSubtotal - $totalDiscount + $freight + $serviceFee);
         } else {
-            $calculatedTotalSales = $totalSalesAmount > 0 ? $totalSalesAmount : $itemsSubtotal;
+            $calculatedTotalSales = $totalSalesAmount > 0 ? $totalSalesAmount : $itemsGrossSubtotal;
         }
 
         $totalAmountDue = max(0, $calculatedTotalSales - $wht);
+
+        // Subtotal to display: gross if discounts exist, so (Subtotal - Discount + Freight + Service Fee = Total Sales)
+        $subtotalToDisplay = $totalDiscount > 0 ? $itemsGrossSubtotal : $itemsNetSubtotal;
+
+        // Label for discount percentage
+        $discountPctDisplay = null;
+        if ($orderDiscountPct > 0) {
+            $discountPctDisplay = (float)$orderDiscountPct . '%';
+        } elseif ($totalItemDiscounts > 0 && count(array_unique($itemDiscountPcts)) === 1 && !empty($itemDiscountPcts)) {
+            $discountPctDisplay = (float)$itemDiscountPcts[0] . '%';
+        }
     @endphp
 
     <div class="invoice-box">
@@ -683,9 +709,9 @@
                             $qty = (float) $item->quantity;
                             $price = (float) ($item->unit_price ?? $item->price);
                             $gross = $qty * $price;
-                            $discVal = (float)($item->discount_value ?? 0);
-                            $discType = $item->discount_type ?? 'percentage';
-                            $discAmt = (float)($item->discount_amount ?? 0);
+                            $discVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+                            $discType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+                            $discAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
                             if ($discAmt <= 0 && $discVal > 0) {
                                 $discAmt = $discType === 'percentage' ? $gross * ($discVal / 100) : $discVal;
                             }
@@ -696,7 +722,14 @@
                         @endphp
                         <tr>
                             <td style="text-align: center; font-weight: bold;">{{ $qty }}</td>
-                            <td style="font-weight: 600;">{{ $desc }}</td>
+                            <td style="font-weight: 600;">
+                                <div>{{ $desc }}</div>
+                                @if($discAmt > 0 || $discVal > 0)
+                                    <div class="item-discount-note" style="font-size: 7.5pt; color: #555; font-weight: normal; margin-top: 1px;">
+                                        Less {{ ($discType === 'percentage' && $discVal > 0) ? (float)$discVal . '% ' : '' }}Discount (-{{ $soSym }}{{ number_format($discAmt > 0 ? $discAmt : $discVal, 2) }})
+                                    </div>
+                                @endif
+                            </td>
                             <td style="text-align: center;">{{ ($item->area && $item->area !== 'N/A' && $item->area !== '-') ? $item->area : '' }}</td>
                             @php
                                 $soSym = ($order->currency === 'USD' ? '$' : '₱');
@@ -735,7 +768,7 @@
                         @endif
                     </div>
                     <div class="subtotal-line" style="font-size: 8.5pt; font-weight: bold; margin-bottom: 3px; min-height: 16px;">
-                        <span class="total-label">SUBTOTAL: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">{{ $soSym }}{{ number_format($itemsSubtotal, 2) }}</span>
+                        <span class="total-label">SUBTOTAL: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">{{ $soSym }}{{ number_format($subtotalToDisplay, 2) }}</span>
                     </div>
                     <div class="service-fee-line" style="font-size: 8.5pt; font-weight: bold; margin-bottom: 3px; min-height: 16px;">
                         @if($serviceFee > 0)
@@ -745,8 +778,8 @@
                         @endif
                     </div>
                     <div class="discount-line" style="font-size: 8.5pt; font-weight: bold; margin-bottom: 3px; min-height: 16px;">
-                        @if($discount > 0)
-                            <span class="total-label">DISCOUNT: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">-{{ $soSym }}{{ number_format($discount, 2) }}</span>
+                        @if($totalDiscount > 0)
+                            <span class="total-label">DISCOUNT{{ $discountPctDisplay ? " ($discountPctDisplay)" : "" }}: </span><span style="padding: 0 8px; min-width: 115px; display: inline-block;">-{{ $soSym }}{{ number_format($totalDiscount, 2) }}</span>
                         @else
                             &nbsp;
                         @endif
@@ -846,11 +879,25 @@
                     }
                     $qty = (float) $item->quantity;
                     $price = (float) ($item->unit_price ?? $item->price);
-                    $subtotal = (float) ($item->amount ?? ($item->subtotal !== null ? $item->subtotal : ($qty * $price)));
+                    $gross = $qty * $price;
+                    $discVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+                    $discType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+                    $discAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
+                    if ($discAmt <= 0 && $discVal > 0) {
+                        $discAmt = $discType === 'percentage' ? $gross * ($discVal / 100) : $discVal;
+                    }
+                    $discAmt = min($gross, max(0, $discAmt));
+                    $subtotal = ($item->subtotal !== null && (float)$item->subtotal > 0 && (float)$item->subtotal < $gross)
+                        ? (float)$item->subtotal
+                        : max(0, $gross - $discAmt);
                     $topOffset = $idx * 0.15;
+                    $itemDiscText = '';
+                    if ($discAmt > 0 || $discVal > 0) {
+                        $itemDiscText = ' (Less ' . (($discType === 'percentage' && $discVal > 0) ? (float)$discVal . '%' : ($soSym . number_format($discAmt > 0 ? $discAmt : $discVal, 2))) . ')';
+                    }
                 @endphp
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 0.45in; width: 0.6in; text-align: center;  font-size: 6pt;">{{ $qty }}</div>
-                <div style="position: absolute; top: {{ $topOffset }}in; left: 1.15in; width: 3.9in;  font-size: 6pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}</div>
+                <div style="position: absolute; top: {{ $topOffset }}in; left: 1.15in; width: 3.9in;  font-size: 6pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}{{ $itemDiscText }}</div>
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 5.15in; width: 0.6in; text-align: center; font-size: 6pt;">{{ ($item->area && $item->area !== 'N/A' && $item->area !== '-') ? $item->area : '' }}</div>
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 5.55in; width: 0.9in; text-align: right; font-size: 6pt;">{{ $soSym }}{{ number_format($price, 2) }}</div>
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 6.52in; width: 0.9in; text-align: right;  font-size: 6pt;">{{ $soSym }}{{ number_format($subtotal, 2) }}</div>
@@ -866,28 +913,22 @@
 
         <!-- Totals -->
 
+        <div style="position: absolute; left: 4.60in; top: 6.75in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10pt;">
+            <span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ $soSym }}{{ number_format($subtotalToDisplay, 2) }}
+        </div>
         @if($freight > 0)
-            <div style="position: absolute; left: 4.60in; top: 6.75in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10pt;">
-            	<span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ $soSym }}{{ number_format($itemsSubtotal, 2) }}
-        	</div>
             <div style="position: absolute; left: 4.60in; top: 6.95in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10pt;">
                 <span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">FREIGHT:</span>{{ $soSym }}{{ number_format($freight, 2) }}
             </div>
         @endif
         @if($serviceFee > 0)
-      		<div style="position: absolute; left: 4.60in; top: 6.75in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10pt;">
-            	<span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ $soSym }}{{ number_format($itemsSubtotal, 2) }}
-        	</div>
             <div style="position: absolute; left: 4.60in; top: 6.95in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10pt;">
                 <span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">SERVICE FEE:</span>{{ $soSym }}{{ number_format($serviceFee, 2) }}
             </div>
         @endif
-        @if($discount > 0)
-            <div style="position: absolute; left: 4.60in; top: 6.75in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10pt;">
-            	<span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ $soSym }}{{ number_format($itemsSubtotal, 2) }}
-        	</div>
+        @if($totalDiscount > 0)
             <div style="position: absolute; left: 4.60in; top: 7.15in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10pt;">
-                <span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">DISCOUNT:</span>-{{ $soSym }}{{ number_format($discount, 2) }}
+                <span style="font-size: 8.5pt; font-weight: bold; margin-right: 6px;">DISCOUNT{{ $discountPctDisplay ? " ($discountPctDisplay)" : "" }}:</span>-{{ $soSym }}{{ number_format($totalDiscount, 2) }}
             </div>
         @endif
         @if($wht > 0)
@@ -936,11 +977,25 @@
                     }
                     $qty = (float) $item->quantity;
                     $price = (float) ($item->unit_price ?? $item->price);
-                    $subtotal = (float) ($item->amount ?? ($item->subtotal !== null ? $item->subtotal : ($qty * $price)));
+                    $gross = $qty * $price;
+                    $discVal = (float)($item->discount_value ?? ($item->soItem?->discount_value ?? 0));
+                    $discType = $item->discount_type ?? ($item->soItem?->discount_type ?? 'percentage');
+                    $discAmt = (float)($item->discount_amount ?? ($item->soItem?->discount_amount ?? 0));
+                    if ($discAmt <= 0 && $discVal > 0) {
+                        $discAmt = $discType === 'percentage' ? $gross * ($discVal / 100) : $discVal;
+                    }
+                    $discAmt = min($gross, max(0, $discAmt));
+                    $subtotal = ($item->subtotal !== null && (float)$item->subtotal > 0 && (float)$item->subtotal < $gross)
+                        ? (float)$item->subtotal
+                        : max(0, $gross - $discAmt);
                     $topOffset = $idx * 0.28;
+                    $itemDiscText = '';
+                    if ($discAmt > 0 || $discVal > 0) {
+                        $itemDiscText = ' (Less ' . (($discType === 'percentage' && $discVal > 0) ? (float)$discVal . '%' : ($soSym . number_format($discAmt > 0 ? $discAmt : $discVal, 2))) . ')';
+                    }
                 @endphp
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 0.45in; width: 0.6in; text-align: center; font-weight: bold; font-size: 9.5pt;">{{ $qty }}</div>
-                <div style="position: absolute; top: {{ $topOffset }}in; left: 1.15in; width: 3.9in; font-weight: bold; font-size: 9.5pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}</div>
+                <div style="position: absolute; top: {{ $topOffset }}in; left: 1.15in; width: 3.9in; font-weight: bold; font-size: 9.5pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}{{ $itemDiscText }}</div>
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 5.15in; width: 0.6in; text-align: center; font-size: 9.5pt;">{{ ($item->area && $item->area !== 'N/A' && $item->area !== '-') ? $item->area : '' }}</div>
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 5.85in; width: 0.9in; text-align: right; font-size: 9.5pt;">{{ $soSym }}{{ number_format($price, 2) }}</div>
                 <div style="position: absolute; top: {{ $topOffset }}in; left: 6.75in; width: 0.9in; text-align: right; font-weight: bold; font-size: 9.5pt;">{{ $soSym }}{{ number_format($subtotal, 2) }}</div>
@@ -956,29 +1011,22 @@
 
         <!-- Totals -->
 
-        @if($freight > 0)
-      
-         <div style="position: absolute; left: 4.60in; top: 4.10in; width: 3.4in; text-align: right; font-weight: bold; font-size: 9.5pt;">
-            <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ number_format($itemsSubtotal, 2) }}
+        <div style="position: absolute; left: 4.60in; top: 4.10in; width: 3.4in; text-align: right; font-weight: bold; font-size: 9.5pt;">
+            <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ $soSym }}{{ number_format($subtotalToDisplay, 2) }}
         </div>
+        @if($freight > 0)
             <div style="position: absolute; left: 4.60in; top: 4.25in; width: 3.4in; text-align: right; font-weight: bold; font-size: 9.5pt;">
                 <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">FREIGHT:</span>{{ $soSym }}{{ number_format($freight, 2) }}
             </div>
         @endif
         @if($serviceFee > 0)
-               <div style="position: absolute; left: 4.60in; top: 4.10in; width: 3.4in; text-align: right; font-weight: bold; font-size: 9.5pt;">
-            <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ number_format($itemsSubtotal, 2) }}
-        </div>
             <div style="position: absolute; left: 4.60in; top: 4.25in; width: 3.4in; text-align: right; font-weight: bold; font-size: 9.5pt;">
                 <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">SERVICE FEE:</span>{{ $soSym }}{{ number_format($serviceFee, 2) }}
             </div>
         @endif
-        @if($discount > 0)
-               <div style="position: absolute; left: 4.60in; top: 4.10in; width: 3.4in; text-align: right; font-weight: bold; font-size: 9.5pt;">
-            <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">SUBTOTAL:</span>{{ number_format($itemsSubtotal, 2) }}
-        </div>
+        @if($totalDiscount > 0)
             <div style="position: absolute; left: 4.60in; top: 4.40in; width: 3.4in; text-align: right; font-weight: bold; font-size: 9.5pt;">
-                <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">DISCOUNT:</span>-{{ $soSym }}{{ number_format($discount, 2) }}
+                <span style="font-size: 8pt; font-weight: bold; margin-right: 6px;">DISCOUNT{{ $discountPctDisplay ? " ($discountPctDisplay)" : "" }}:</span>-{{ $soSym }}{{ number_format($totalDiscount, 2) }}
             </div>
         @endif
         <div style="position: absolute; left: 4.60in; top: 4.70in; width: 3.4in; text-align: right; font-weight: bold; font-size: 10.5pt;">

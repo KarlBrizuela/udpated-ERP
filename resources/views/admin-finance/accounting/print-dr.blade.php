@@ -39,7 +39,7 @@
             justify-content: space-between;
         }
 
-        /* Half-Page Layout Rules */
+        /* Half-Page (1/2 Paper Size) Layout Rules */
         body.half-page-mode {
             padding: 10px 0 !important;
         }
@@ -58,55 +58,71 @@
             border-bottom-width: 1.5px !important;
         }
         body.half-page-mode .header-logo {
-            width: 45px !important;
-            height: 45px !important;
+            width: 40px !important;
+            height: 40px !important;
         }
         body.half-page-mode .company-name {
-            font-size: 10.5pt !important;
+            font-size: 9.5pt !important;
         }
         body.half-page-mode .company-subtitle,
         body.half-page-mode .company-address,
         body.half-page-mode .company-contact {
-            font-size: 7pt !important;
-            line-height: 1.15 !important;
-        }
-        body.half-page-mode .doc-title {
-            font-size: 12pt !important;
+            font-size: 6.5pt !important;
+            margin-top: 0px !important;
+            line-height: 1.1 !important;
         }
         body.half-page-mode .doc-no {
-            font-size: 9.5pt !important;
+            font-size: 8pt !important;
         }
         body.half-page-mode .doc-no span {
-            font-size: 10.5pt !important;
+            font-size: 9pt !important;
+        }
+        body.half-page-mode .doc-title {
+            font-size: 9.5pt !important;
         }
         body.half-page-mode .info-grid {
             margin-bottom: 4px !important;
-            font-size: 8pt !important;
-        }
-        body.half-page-mode .info-grid td {
-            padding: 1px 4px !important;
-        }
-        body.half-page-mode .items-table {
-            font-size: 8pt !important;
-            margin-bottom: 4px !important;
-        }
-        body.half-page-mode .items-table th,
-        body.half-page-mode .items-table td {
-            padding: 2px 4px !important;
-        }
-        body.half-page-mode .signatories-row {
-            margin-top: 6px !important;
-            margin-bottom: 6px !important;
             font-size: 7.5pt !important;
         }
+        body.half-page-mode .info-grid td {
+            padding: 1px 0 !important;
+        }
+        body.half-page-mode .items-table {
+            margin-bottom: 4px !important;
+            font-size: 7.5pt !important;
+        }
+        body.half-page-mode .items-table th {
+            padding: 2px 4px !important;
+            font-size: 7pt !important;
+        }
+        body.half-page-mode .items-table td {
+            padding: 2px 4px !important;
+            line-height: 1.1 !important;
+        }
+        body.half-page-mode .particulars-block {
+            padding: 4px 6px !important;
+            font-size: 7pt !important;
+            margin-top: 3px !important;
+            margin-bottom: 3px !important;
+        }
+        body.half-page-mode .signatories-row {
+            margin-top: 4px !important;
+            margin-bottom: 2px !important;
+            font-size: 7pt !important;
+        }
         body.half-page-mode .sig-line {
-            margin-top: 10px !important;
-            min-height: 12px !important;
+            margin-top: 14px !important;
+            border-bottom-width: 1px !important;
         }
         body.half-page-mode .footer-notice {
-            font-size: 6.5pt !important;
-            padding-top: 3px !important;
-            border-top: 1px solid #aaa !important;
+            font-size: 5.5pt !important;
+            margin-top: 2px !important;
+        }
+        body.half-page-mode.preprinted-mode .dr-box {
+            padding-top: 0.45in !important;
+        }
+        body.half-page-mode.preprinted-mode .sig-line {
+            margin-top: 14px !important;
         }
 
         .header-section {
@@ -159,20 +175,25 @@
         }
 
         .doc-no {
-            font-size: 11pt;
+            font-size: 10.5pt;
             font-weight: 800;
             margin-bottom: 2px;
         }
 
+        .doc-no span {
+            color: #000;
+            font-size: 11.5pt;
+        }
+
         .doc-no span.doc-no-val {
             color: #d32f2f;
-            font-size: 13pt;
+            font-size: 11.5pt;
             font-weight: 900;
             letter-spacing: 0.5px;
         }
 
         .doc-title {
-            font-size: 14.5pt;
+            font-size: 14pt;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -187,63 +208,63 @@
         }
 
         .info-grid td {
-            padding: 3px 5px;
+            padding: 3px 4px;
             vertical-align: bottom;
         }
 
         .info-label {
             font-weight: bold;
-            color: #000;
+            width: 70px;
             white-space: nowrap;
-            width: 110px;
         }
 
         .info-value-line {
-            border-bottom: 1px solid #000;
-            font-weight: bold;
-            color: #000;
-            padding-left: 4px;
+            border-bottom: 1.5px solid #000;
+            padding-left: 5px;
+            font-weight: 600;
         }
 
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
-            font-size: 9pt;
+            margin-bottom: 12px;
+            font-size: 9.5pt;
         }
 
-        .items-table thead th {
-            background-color: #f1f3f5;
-            color: #000;
-            border-top: 1.5px solid #000;
-            border-bottom: 1.5px solid #000;
-            padding: 5px 6px;
-            font-weight: bold;
+        .items-table th {
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 5px 8px;
             text-transform: uppercase;
+            font-weight: 900;
             font-size: 8.5pt;
         }
 
-        .items-table tbody td {
-            padding: 4px 6px;
-            border-bottom: 1px dotted #ccc;
-            vertical-align: middle;
-            color: #000;
+        .items-table td {
+            padding: 5px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: top;
+        }
+
+        .items-table tr:last-child td {
+            border-bottom: none;
         }
 
         .particulars-block {
-            padding: 8px 10px;
+            padding: 6px 10px;
             background: #fafafa;
             border: 1px dashed #bbb;
             border-radius: 4px;
-            font-size: 8.5pt;
+            font-size: 8pt;
             margin-top: 6px;
             margin-bottom: 8px;
+            line-height: 1.3;
         }
 
         .signatories-row {
             display: flex;
             justify-content: space-between;
-            margin-top: 14px;
+            margin-top: 12px;
             margin-bottom: 12px;
             font-size: 8.5pt;
         }
@@ -255,7 +276,6 @@
 
         .sig-col:last-child {
             padding-right: 0;
-            flex: 1.3;
         }
 
         .sig-line {
@@ -325,10 +345,14 @@
         body.preprinted-mode:not(.half-page-mode) .preprinted-overlay-whole {
             display: block !important;
             visibility: visible !important;
+            border: none !important;
+            box-shadow: none !important;
         }
         body.preprinted-mode.half-page-mode .preprinted-overlay-half {
             display: block !important;
             visibility: visible !important;
+            border: none !important;
+            box-shadow: none !important;
         }
 
         @media print {
@@ -339,22 +363,51 @@
                 display: none !important;
                 visibility: hidden !important;
             }
+
             body {
-                background: #ffffff !important;
-                color: #000000 !important;
+                background: #fff !important;
+                background-color: #fff !important;
                 padding: 0 !important;
                 margin: 0 !important;
             }
+
             .dr-box {
                 border: none !important;
                 box-shadow: none !important;
-                padding: 0.15in 0.25in !important;
-                width: 100% !important;
-                max-width: 100% !important;
+                margin: 0 auto !important;
+                padding: 0.2in 0.3in !important;
+            }
+
+            body.preprinted-mode {
+                background: #fff !important;
+                padding: 0 !important;
+            }
+            body.preprinted-mode .actions-bar {
+                display: none !important;
+            }
+            body.preprinted-mode .dr-box {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                max-height: 0 !important;
+                overflow: hidden !important;
+                opacity: 0 !important;
+            }
+            body.preprinted-mode:not(.half-page-mode) .preprinted-overlay-whole {
+                display: block !important;
+                visibility: visible !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            body.preprinted-mode.half-page-mode .preprinted-overlay-half {
+                display: block !important;
+                visibility: visible !important;
+                border: none !important;
+                box-shadow: none !important;
             }
             @page {
-                size: letter portrait;
-                margin: 0.25in 0.35in;
+                size: Letter portrait;
+                margin: 0;
             }
         }
     </style>
@@ -430,8 +483,10 @@
             ? \Carbon\Carbon::parse($order->dr_prepared_at)->format('m/d/Y') 
             : ($order->created_at ? $order->created_at->format('m/d/Y') : date('m/d/Y'));
         
-        // Determine DR Number display
-        $drNoDisplay = $deliveryReceipt?->dr_number ?: ($order->dr_number ?: 'DR-' . $order->so_number);
+        // Determine DR Number display (Display SI Number if available, as requested)
+        $activeInvoice = \App\Models\SalesInvoice::where('so_id', $order->id)->where('status', '!=', 'cancelled')->latest()->first();
+        $siNumber = $order->si_number ?: ($deliveryReceipt?->si_number ?: ($activeInvoice?->si_number ?? ($order->invoice?->si_number ?? ($order->invoices?->first()?->si_number ?? null))));
+        $drNoDisplay = $siNumber ?: ($deliveryReceipt?->dr_number ?: ($order->dr_number ?: 'DR-' . $order->so_number));
 
         // Signatories
         $preparedByName = $order->drPreparedBy?->name ?? ($order->preparedBy?->name ?? 'System');
@@ -460,7 +515,7 @@
                     </div>
                 </div>
                 <div class="header-right">
-                    <div class="doc-no"><span class="text-muted" style="font-size: 11pt;">№ </span><span class="doc-no-val">{{ $drNoDisplay }}</span></div>
+                    <div class="doc-no"><span class="text-muted">№ </span><span class="doc-no-val">{{ $drNoDisplay }}</span></div>
                     <div class="doc-title">Delivery Receipt</div>
                     <div class="text-muted small fw-bold" style="font-size: 7.5pt;">NON-VAT REGISTERED</div>
                     @if(isset($halfLabel) && $halfLabel)
@@ -553,10 +608,10 @@
                                 ?? ($item->book?->item_code ?? '')))))));
                         @endphp
                         <tr>
-                            <td style="text-align: center; font-weight: bold; font-size: 10pt;">{{ $displayQty }}</td>
-                            <td style="text-align: center; color: #333;">{{ $unit }}</td>
-                            <td style="font-weight: 600; font-size: 9.5pt;">{{ $desc }}</td>
-                            <td style="text-align: center; font-size: 8.5pt; color: #444;">{{ $isbn ?: '—' }}</td>
+                            <td style="text-align: center; font-weight: bold;">{{ $displayQty }}</td>
+                            <td style="text-align: center;">{{ $unit }}</td>
+                            <td style="font-weight: 600;">{{ $desc }}</td>
+                            <td style="text-align: center;">{{ $isbn ?: '—' }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -565,10 +620,10 @@
                     @endforelse
                 </tbody>
                 <tfoot>
-                    <tr style="border-top: 1.5px solid #000;">
-                        <td style="text-align: center; font-weight: bold; font-size: 10pt;">{{ $totalQuantitySum }}</td>
+                    <tr style="border-top: 2px solid #000; border-bottom: 2px solid #000;">
+                        <td style="text-align: center; font-weight: bold;">{{ $totalQuantitySum }}</td>
                         <td style="text-align: center; font-weight: bold;">pcs</td>
-                        <td colspan="2" style="font-weight: bold; text-transform: uppercase; font-size: 8.5pt; padding-left: 8px;">
+                        <td colspan="2" style="font-weight: 900; text-transform: uppercase; font-size: 8.5pt; padding-left: 8px;">
                             Total Quantity Delivered
                         </td>
                     </tr>
